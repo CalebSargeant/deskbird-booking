@@ -1,0 +1,5 @@
+repos:
+  - repo: https://github.com/calebsargeant/pre-commit-hooks
+    rev: v1.4.1
+    hooks:
+      - id: all
