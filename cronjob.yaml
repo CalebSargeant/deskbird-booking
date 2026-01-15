@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: deskbird-booking
+  namespace: default
+spec:
+  schedule: "0 8 * * 4"  # Run every Thursday at 8 AM UTC to book for next Thursday
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: deskbird-booking
+            image: your-registry/deskbird-booking:latest  # Update with your registry
+            imagePullPolicy: Always
+            env:
+            - name: OP_SERVICE_ACCOUNT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: deskbird-credentials
+                  key: OP_SERVICE_ACCOUNT_TOKEN
+            - name: OP_ITEM_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: deskbird-credentials
+                  key: OP_ITEM_NAME
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+          restartPolicy: OnFailure
