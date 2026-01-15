@@ -47,6 +47,28 @@ The script uses 1Password CLI to fetch credentials at runtime, making it fully c
 
 ## Deployment
 
+### Using Kustomize (Recommended)
+
+1. Create and encrypt your secret:
+   ```bash
+   cd k8s/overlays/prod
+   # Edit secret.yaml with your 1Password service account token
+   # Encrypt the secret with your preferred tool (e.g., SOPS, sealed-secrets)
+   ```
+
+2. Deploy using Kustomize:
+   ```bash
+   kubectl apply -k k8s/overlays/prod
+   ```
+
+3. Verify deployment:
+   ```bash
+   kubectl get cronjob -n automation
+   kubectl get pods -n automation
+   ```
+
+### Manual Deployment
+
 1. Build and push the image:
    ```bash
    docker build -t your-registry/deskbird-booking:latest .
@@ -55,13 +77,9 @@ The script uses 1Password CLI to fetch credentials at runtime, making it fully c
 
 2. Update `cronjob.yaml` with your image registry
 
-3. Encrypt and apply the secret:
+3. Apply resources:
    ```bash
    kubectl apply -f secret.yaml
-   ```
-
-4. Deploy the CronJob:
-   ```bash
    kubectl apply -f cronjob.yaml
    ```
 

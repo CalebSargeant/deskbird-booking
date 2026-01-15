@@ -2,9 +2,8 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: deskbird-booking
-  namespace: default
 spec:
-  schedule: "0 8 * * 4"  # Run every Thursday at 8 AM UTC to book for next Thursday
+  schedule: "0 8 * * 1,4"  # Run every Monday and Thursday at 8 AM UTC
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   jobTemplate:
@@ -13,7 +12,7 @@ spec:
         spec:
           containers:
           - name: deskbird-booking
-            image: your-registry/deskbird-booking:latest  # Update with your registry
+            image: ghcr.io/calebsargeant/deskbird-booking:latest
             imagePullPolicy: Always
             env:
             - name: OP_SERVICE_ACCOUNT_TOKEN

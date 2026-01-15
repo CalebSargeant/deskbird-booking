@@ -1,5 +1,6 @@
 # Sensitive files - DO NOT COMMIT
 secret.yaml
+k8s/overlays/*/secret.yaml
 
 # Python
 __pycache__/
