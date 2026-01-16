@@ -1,11 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: automation
-
 resources:
   - ../../base
   - secret.enc.yaml
-
 images:
   - name: ghcr.io/calebsargeant/deskbird-booking
-    newTag: v1.0.0 # {"$imagepolicy": "flux-system:deskbird-booking:tag"}
+    newTag: v1.4.0 # {"$imagepolicy": "flux-system:deskbird-booking:tag"}
