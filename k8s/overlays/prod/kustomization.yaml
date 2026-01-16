@@ -4,7 +4,7 @@ namespace: automation
 
 resources:
   - ../../base
-  - secret.yaml
+  - secret.enc.yaml
 
 images:
   - name: ghcr.io/calebsargeant/deskbird-booking
