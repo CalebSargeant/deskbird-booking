@@ -10,6 +10,8 @@ spec:
     spec:
       template:
         spec:
+          imagePullSecrets:
+          - name: ghcr-pull-secret
           containers:
           - name: deskbird-booking
             image: ghcr.io/calebsargeant/deskbird-booking:latest
