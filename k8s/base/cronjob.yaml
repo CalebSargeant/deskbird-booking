@@ -27,6 +27,11 @@ spec:
                 secretKeyRef:
                   name: deskbird-credentials
                   key: OP_ITEM_NAME
+            - name: OP_VAULT
+              valueFrom:
+                secretKeyRef:
+                  name: deskbird-credentials
+                  key: OP_VAULT
             resources:
               requests:
                 memory: "256Mi"
