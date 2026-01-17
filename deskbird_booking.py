@@ -49,6 +49,13 @@ def get_1password_otp(item_name, vault="Private"):
 OP_ITEM_NAME = os.environ.get("OP_ITEM_NAME", "Deskbird")
 OP_VAULT = os.environ.get("OP_VAULT", "Private")
 
+# Deskbird office and floor IDs
+OFFICE_ID = os.environ.get("OFFICE_ID")
+FLOOR_ID = os.environ.get("FLOOR_ID")
+
+if not OFFICE_ID or not FLOOR_ID:
+    raise ValueError("OFFICE_ID and FLOOR_ID environment variables must be set")
+
 print(f"Fetching credentials from 1Password item: {OP_ITEM_NAME} in vault: {OP_VAULT}")
 EMAIL = get_1password_field(OP_ITEM_NAME, "username", OP_VAULT)
 PASSWORD = get_1password_field(OP_ITEM_NAME, "password", OP_VAULT)
@@ -215,11 +222,11 @@ try:
     
     # First navigate to the main booking dashboard to ensure sidebar loads
     print("Step 6a: Navigating to main booking dashboard...")
-    driver.get("https://app.deskbird.com/office/14205/bookings/dashboard")
+    driver.get(f"https://app.deskbird.com/office/{OFFICE_ID}/bookings/dashboard")
     time.sleep(5)  # Wait for initial load
     
     # Now navigate to the specific date
-    booking_url = f"https://app.deskbird.com/office/14205/bookings/dashboard?floorId=41424&viewType=card&areaType=flexDesk&startTime={start_time}&endTime={end_time}&isFullDay=true"
+    booking_url = f"https://app.deskbird.com/office/{OFFICE_ID}/bookings/dashboard?floorId={FLOOR_ID}&viewType=card&areaType=flexDesk&startTime={start_time}&endTime={end_time}&isFullDay=true"
     
     print(f"Step 6b: Navigating to booking page for {booking_date.strftime('%Y-%m-%d')}...")
     driver.get(booking_url)
