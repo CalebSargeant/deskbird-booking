@@ -305,6 +305,58 @@ try:
         print(driver.page_source[:5000])
         raise Exception("Could not find Quick book button")
     
+    # Step 8: Enable "Full day" toggle if it exists and is disabled
+    print("Step 8: Checking for 'Full day' toggle...")
+    time.sleep(2)  # Wait for booking modal/dialog to appear
+    driver.save_screenshot("/tmp/deskbird_booking_modal.png")
+    
+    try:
+        # Look for the Full day toggle switch
+        # Try different possible selectors for the toggle
+        toggle_selectors = [
+            (By.XPATH, "//label[contains(text(), 'Full day')]/..//input[@type='checkbox']"),
+            (By.XPATH, "//label[contains(., 'Full day')]/..//input[@type='checkbox']"),
+            (By.XPATH, "//input[@type='checkbox' and contains(@id, 'fullday')]"),
+            (By.XPATH, "//input[@type='checkbox' and contains(@id, 'fullDay')]"),
+            (By.XPATH, "//input[@type='checkbox' and contains(@name, 'fullday')]"),
+            (By.XPATH, "//input[@type='checkbox' and contains(@name, 'fullDay')]"),
+            (By.CSS_SELECTOR, "input[type='checkbox'][id*='fullday'], input[type='checkbox'][id*='full-day']"),
+            (By.CSS_SELECTOR, "input[type='checkbox'][name*='fullday'], input[type='checkbox'][name*='full-day']"),
+        ]
+        
+        toggle_found = False
+        for by_method, selector in toggle_selectors:
+            try:
+                print(f"Trying toggle selector: {selector[:80]}...")
+                full_day_toggle = WebDriverWait(driver, 3).until(
+                    EC.presence_of_element_located((by_method, selector))
+                )
+                
+                # Check if the toggle is already enabled
+                is_checked = full_day_toggle.is_selected()
+                print(f"Full day toggle found! Currently {'enabled' if is_checked else 'disabled'}")
+                
+                if not is_checked:
+                    print("Enabling 'Full day' toggle...")
+                    # Click the toggle to enable it
+                    full_day_toggle.click()
+                    time.sleep(1)
+                    print("'Full day' toggle enabled!")
+                    driver.save_screenshot("/tmp/deskbird_fullday_enabled.png")
+                else:
+                    print("'Full day' toggle is already enabled")
+                
+                toggle_found = True
+                break
+            except Exception as e:
+                print(f"  Failed: {str(e)[:100]}")
+                continue
+        
+        if not toggle_found:
+            print("Warning: Could not find 'Full day' toggle - it may already be enabled by URL parameter or not present")
+    except Exception as e:
+        print(f"Warning: Error while looking for Full day toggle: {str(e)[:200]}")
+        print("Continuing with booking...")
     
     # Wait a moment to ensure booking completes
     time.sleep(3)
