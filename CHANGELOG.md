@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v1.6.0 (2026-01-18)
+
+### Chores
+
+- Update deskbird-booking image
+  ([`2814ad1`](https://github.com/CalebSargeant/deskbird-booking/commit/2814ad147b5e31031eaa866838d5478ffbbb51cd))
+
+### Features
+
+- Enable Full day toggle switch in booking flow
+  ([`91d0918`](https://github.com/CalebSargeant/deskbird-booking/commit/91d091810c98ba3a8a24a8d6fa17eafc8989a5e3))
+
+### Refactoring
+
+- Improve Full day toggle selectors specificity
+  ([`a46ff06`](https://github.com/CalebSargeant/deskbird-booking/commit/a46ff06deac6bba132f9ef4af0426c45a73fa7b3))
+
+
 ## v1.5.0 (2026-01-17)
 
 ### Chores
