@@ -320,8 +320,8 @@ try:
             (By.XPATH, "//input[@type='checkbox' and contains(@id, 'fullDay')]"),
             (By.XPATH, "//input[@type='checkbox' and contains(@name, 'fullday')]"),
             (By.XPATH, "//input[@type='checkbox' and contains(@name, 'fullDay')]"),
-            (By.CSS_SELECTOR, "input[type='checkbox'][id*='full']"),
-            (By.CSS_SELECTOR, "input[type='checkbox'][name*='full']"),
+            (By.CSS_SELECTOR, "input[type='checkbox'][id*='fullday'], input[type='checkbox'][id*='full-day']"),
+            (By.CSS_SELECTOR, "input[type='checkbox'][name*='fullday'], input[type='checkbox'][name*='full-day']"),
         ]
         
         toggle_found = False
