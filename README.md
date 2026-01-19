@@ -26,10 +26,11 @@ Automated desk booking for Deskbird using Selenium and Kubernetes CronJob. This 
 
 ### Booking Logic
 
-- Calculates booking date (today + 7 days)
+- Calculates booking date (4 days ahead for Friday bookings)
 - Navigates to your configured office and floor
-- Books a full-day desk (8 AM - 6 PM)
-- Clicks the first available "Quick book" button
+- Books a full-day desk (6 AM - 6 PM)
+- **Preferred desk support**: Attempts to book your preferred desk first (if configured)
+- **Fallback**: Books any available desk if preferred is unavailable
 - Saves debugging screenshots on failure
 
 ## 1Password Integration
@@ -74,6 +75,7 @@ The script uses 1Password CLI to fetch credentials at runtime, making it fully c
    # - OP_VAULT: Your 1Password vault name
    # - OFFICE_ID: Your Deskbird office ID
    # - FLOOR_ID: Your Deskbird floor ID
+   # - PREFERRED_DESK: (Optional) Your preferred desk name (e.g., "5.09 D")
    
    # Encrypt with SOPS
    sops -e secret.yaml > secret.enc.yaml
@@ -107,6 +109,7 @@ The script uses 1Password CLI to fetch credentials at runtime, making it fully c
      --from-literal=OP_VAULT="Private" \
      --from-literal=OFFICE_ID="your-office-id" \
      --from-literal=FLOOR_ID="your-floor-id" \
+     --from-literal=PREFERRED_DESK="5.09 D" \
      -n automation
    ```
 
@@ -126,6 +129,7 @@ The script uses 1Password CLI to fetch credentials at runtime, making it fully c
 | `OP_VAULT` | No | `Private` | 1Password vault name |
 | `OFFICE_ID` | Yes | - | Deskbird office ID (from URL) |
 | `FLOOR_ID` | Yes | - | Deskbird floor ID (from URL) |
+| `PREFERRED_DESK` | No | - | Preferred desk (e.g., "D", "5.09 D", "5.08 B"). Letter only defaults to 5.09. Books any desk if unavailable |
 
 ### Schedule
 

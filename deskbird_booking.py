@@ -69,10 +69,14 @@ OP_VAULT = os.environ.get("OP_VAULT", "Private")
 # Deskbird office and floor IDs
 OFFICE_ID = os.environ.get("OFFICE_ID")
 FLOOR_ID = os.environ.get("FLOOR_ID")
+PREFERRED_DESK = os.environ.get("PREFERRED_DESK", None)  # Optional preferred desk name
 
 if not OFFICE_ID or not FLOOR_ID:
     logger.error("OFFICE_ID and FLOOR_ID environment variables must be set")
     raise ValueError("OFFICE_ID and FLOOR_ID environment variables must be set")
+
+if PREFERRED_DESK:
+    logger.info(f"Preferred desk: {PREFERRED_DESK}")
 
 logger.info(f"Starting Deskbird booking automation")
 logger.info(f"Fetching credentials from 1Password item: {OP_ITEM_NAME} in vault: {OP_VAULT}")
@@ -255,10 +259,7 @@ try:
     # Step 6: Calculate next week's booking date
     logger.info("Step 6: Calculating booking date")
     today = datetime.now()
-    days_ahead = 7 + (today.weekday() - today.weekday())  # Same day next week
-    if days_ahead <= 0:
-        days_ahead += 7
-    booking_date = today + timedelta(days=7)  # Always book exactly 7 days ahead
+    booking_date = today + timedelta(days=7)  # Book for this day next week (7 days ahead from today)
     logger.info(f"Booking for date: {booking_date.strftime('%Y-%m-%d %A')}")
     
     # Convert to epoch milliseconds for full day (7am to 7pm)
@@ -311,42 +312,182 @@ try:
     # Step 6c: Check if already booked
     logger.info("Step 6c: Checking if already booked for this date")
     try:
-        # Look for existing booking indicator
-        existing_booking = driver.find_element(By.XPATH, "//div[contains(@class, 'booking') or contains(., 'Booked')]")
-        if existing_booking:
-            logger.info("✓ Desk already booked for this date - no action needed")
-            driver.quit()
-            exit(0)
+        # Look for specific booking indicator - check if "No bookings" message exists
+        no_bookings = driver.find_element(By.XPATH, "//div[contains(text(), 'No bookings for the selected day')]")
+        logger.debug("Found 'No bookings' message, proceeding with booking attempt")
     except:
-        logger.debug("No existing booking found, proceeding with booking attempt")
+        # If "No bookings" message doesn't exist, there might be an existing booking
+        try:
+            # Look for actual booking cards/items in My bookings section
+            existing_booking = driver.find_element(By.XPATH, "//div[contains(@class, 'booking-card') or contains(@class, 'booked-desk')]")
+            if existing_booking:
+                logger.info("✓ Desk already booked for this date - no action needed")
+                driver.quit()
+                exit(0)
+        except:
+            logger.debug("Could not determine booking status clearly, proceeding with booking attempt")
     
     # Step 7: Click the first available "Quick book" button
     logger.info("Step 7: Looking for booking button")
     
-    # Try different selectors in order of preference
-    button_found = False
-    selectors = [
-        (By.CSS_SELECTOR, "a[data-testid='common--user-spaces-cards-quick-book']"),
-        (By.XPATH, "//a[@data-testid='common--user-spaces-cards-quick-book']"),
-        (By.XPATH, "//a[contains(text(), 'Quick book')]"),
-        (By.XPATH, "//a[contains(., 'Quick book')]"),
-        (By.XPATH, "//a[contains(@class, 'book-cta')]"),
-    ]
+    # Scroll down to make sure all desk cards are visible (especially bottom ones)
+    logger.debug("Scrolling to reveal all desk cards")
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(2)
+    driver.save_screenshot("/tmp/deskbird_after_scroll.png")
+    logger.debug("Screenshot after scroll saved")
     
-    for by_method, selector in selectors:
+    button_found = False
+    booked_desk = None
+    
+    # If preferred desk is specified, try to book it first
+    if PREFERRED_DESK:
+        logger.info(f"Looking for preferred desk: {PREFERRED_DESK}")
         try:
-            logger.debug(f"Trying {by_method} selector: {selector[:60]}...")
-            quick_book_button = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((by_method, selector))
-            )
-            logger.info(f"Found button with {by_method} selector")
-            quick_book_button.click()
-            logger.info("Clicked 'Quick book' button successfully")
-            button_found = True
-            break
+            # Parse preferred desk: expect format like "D" or "5.09 D" or "Desk 5.09 D"
+            # Extract the letter (A, B, C, D) and desk number if provided
+            desk_parts = PREFERRED_DESK.strip().split()
+            desk_letter = None
+            desk_number = None
+            
+            # Try to identify desk letter and number
+            for part in desk_parts:
+                if part in ['A', 'B', 'C', 'D']:  # Single letter labels
+                    desk_letter = part
+                elif '5.' in part or part.replace('.', '').isdigit():  # Desk number like "5.09" or "509"
+                    desk_number = part.replace('Desk', '').strip()
+                    # Normalize format to "5.XX"
+                    if '.' not in desk_number:
+                        desk_number = f"5.{desk_number.lstrip('5')}"
+            
+            # If only single letter provided and no number, default to 5.09 for backward compatibility
+            if not desk_number and desk_letter and len(PREFERRED_DESK.strip()) <= 3:
+                desk_number = "5.09"
+                logger.info(f"Preferred desk letter '{desk_letter}' only - defaulting to Desk {desk_number}")
+            elif desk_letter and desk_number:
+                logger.info(f"Preferred desk: {desk_number} {desk_letter}")
+            
+            # Build selector that looks for the desk letter near the desk number
+            if desk_letter and desk_number:
+                # Look for a container that has both the desk letter and desk number
+                preferred_desk_selectors = [
+                    # Find desk letter that's in a card also containing the desk number
+                    f"//div[contains(., 'Desk {desk_number}')]//preceding::*[contains(text(), '{desk_letter}') and not(contains(text(), '{desk_letter} '))][1]/ancestor::div[contains(@class, 'space') or contains(@class, 'card')][.//div[contains(., 'Desk {desk_number}')]]//a[contains(., 'Quick book')]",
+                    # Alternative: find the letter, then check if same container has desk number
+                    f"//*[text()='{desk_letter}' or text()='{desk_letter} ♥']/ancestor::*[.//div[contains(., 'Desk {desk_number}')] and .//a[contains(., 'Quick book')]][1]//a[contains(., 'Quick book')]",
+                    # Try finding the container with both letter and number visible
+                    f"//div[contains(., '{desk_letter}') and contains(., 'Desk {desk_number}')]//a[contains(., 'Quick book')]",
+                ]
+                
+                # Try to find and scroll the desk into view
+                logger.debug(f"Looking for desk {desk_letter} near Desk {desk_number}")
+                desk_element = None
+                try:
+                    # Try to find element containing both identifiers
+                    desk_element = driver.find_element(By.XPATH, f"//div[contains(., '{desk_letter}') and contains(., 'Desk {desk_number}')]")
+                    if desk_element:
+                        logger.debug(f"Found desk element, scrolling into view")
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", desk_element)
+                        time.sleep(1)
+                        driver.save_screenshot("/tmp/deskbird_preferred_desk_view.png")
+                except:
+                    logger.debug("Could not scroll to preferred desk, will try to find button anyway")
+            else:
+                # Fallback to original logic if we can't parse
+                preferred_desk_selectors = [
+                    f"//div[contains(., '{PREFERRED_DESK}')]//following-sibling::*//a[contains(., 'Quick book')]",
+                    f"//div[contains(., '{PREFERRED_DESK}')]//ancestor::div[contains(@class, 'space') or contains(@class, 'card')]//a[contains(., 'Quick book')]",
+                ]
+            
+            # Skip XPath selectors for now - go straight to manual filtering
+            # for selector in preferred_desk_selectors:
+            #     try:
+            #         logger.debug(f"Trying preferred desk selector: {selector[:80]}...")
+            #         preferred_button = WebDriverWait(driver, 3).until(
+            #             EC.element_to_be_clickable((By.XPATH, selector))
+            #         )
+            #         preferred_button.click()
+            #         logger.info(f"✓ Successfully booked preferred desk: {PREFERRED_DESK}")
+            #         booked_desk = PREFERRED_DESK
+            #         button_found = True
+            #         break
+            #     except:
+            #         continue
+            
+            # Use manual filtering approach (more reliable)
+            if not button_found and desk_letter and desk_number:
+                logger.debug(f"Manual filtering for My spaces: letter {desk_letter} + Desk {desk_number}")
+                try:
+                    # Limit search to the 'My spaces' widget to avoid matching 'Desk' from elsewhere
+                    my_spaces = driver.find_element(By.XPATH, "//db-my-spaces | //div[contains(., 'My spaces')]")
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", my_spaces)
+                    time.sleep(1)
+                    
+                    # Find all Quick book buttons inside My spaces
+                    all_buttons = my_spaces.find_elements(By.XPATH, ".//a[contains(., 'Quick book')]")
+                    logger.debug(f"My spaces has {len(all_buttons)} Quick book buttons")
+                    
+                    for button in all_buttons:
+                        try:
+                            # Get the card container for this entry
+                            parent = button.find_element(By.XPATH, "./ancestor::div[contains(@class, 'space') or contains(@class, 'card') or contains(@class, 'ion-card')][1]")
+                            parent_text = parent.text.strip()
+                            lines = [ln.strip() for ln in parent_text.splitlines() if ln.strip()]
+                            first_token = lines[0].split()[0] if lines else ""
+                            contains_number = (f"Desk {desk_number}" in parent_text)
+                            logger.debug(f"Entry first token='{first_token}', contains Desk {desk_number}={contains_number}")
+                            
+                            if first_token == desk_letter and contains_number:
+                                logger.info(f"Found preferred entry: {desk_letter} + Desk {desk_number}")
+                                # Scroll into view and click
+                                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button)
+                                time.sleep(0.5)
+                                button.click()
+                                logger.info(f"✓ Successfully booked preferred desk: {desk_number} {desk_letter}")
+                                booked_desk = f"{desk_number} {desk_letter}"
+                                button_found = True
+                                break
+                        except Exception as e:
+                            logger.debug(f"Skipping entry: {str(e)[:80]}")
+                            continue
+                except Exception as e:
+                    logger.debug(f"Manual filtering in My spaces failed: {str(e)[:120]}")
+            
+            if not button_found:
+                logger.warning(f"Preferred desk '{PREFERRED_DESK}' not available, will book any other desk")
         except Exception as e:
-            logger.debug(f"Failed with {by_method}: {str(e)[:100]}")
-            continue
+            logger.warning(f"Could not find preferred desk: {str(e)[:100]}")
+    
+    # If preferred desk wasn't booked, try to book any available desk
+    if not button_found:
+        logger.info("Looking for any available desk")
+        # Try different selectors in order of preference
+        selectors = [
+            (By.CSS_SELECTOR, "a[data-testid='common--user-spaces-cards-quick-book']"),
+            (By.XPATH, "//a[@data-testid='common--user-spaces-cards-quick-book']"),
+            (By.XPATH, "//a[contains(text(), 'Quick book')]"),
+            (By.XPATH, "//a[contains(., 'Quick book')]"),
+            (By.XPATH, "//button[contains(text(), 'Book')]"),
+            (By.XPATH, "//button[contains(., 'Book')]"),
+            (By.XPATH, "//a[contains(@class, 'book-cta')]"),
+            (By.CSS_SELECTOR, "button[class*='book']"),
+            (By.CSS_SELECTOR, "a[class*='book']"),
+        ]
+        
+        for by_method, selector in selectors:
+            try:
+                logger.debug(f"Trying {by_method} selector: {selector[:60]}...")
+                quick_book_button = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((by_method, selector))
+                )
+                logger.info(f"Found button with {by_method} selector")
+                quick_book_button.click()
+                logger.info("✓ Clicked 'Quick book' button - booked any available desk")
+                button_found = True
+                break
+            except Exception as e:
+                logger.debug(f"Failed with {by_method}: {str(e)[:100]}")
+                continue
     
     if not button_found:
         logger.error("Could not find booking button with any selector")
