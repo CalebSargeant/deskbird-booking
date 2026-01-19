@@ -214,8 +214,8 @@ try:
         days_ahead += 7
     booking_date = today + timedelta(days=7)  # Always book exactly 7 days ahead
     
-    # Convert to epoch milliseconds for office hours (8 AM to 6 PM)
-    start_of_day = booking_date.replace(hour=8, minute=0, second=0, microsecond=0)
+    # Convert to epoch milliseconds for full day (7am to 7pm)
+    start_of_day = booking_date.replace(hour=6, minute=0, second=0, microsecond=0)
     end_of_day = booking_date.replace(hour=18, minute=0, second=0, microsecond=0)
     start_time = int(start_of_day.timestamp() * 1000)
     end_time = int(end_of_day.timestamp() * 1000)
