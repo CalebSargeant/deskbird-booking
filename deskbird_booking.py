@@ -350,25 +350,28 @@ try:
     
     if not button_found:
         logger.error("Could not find booking button with any selector")
-        logger.error(f"Current URL: {driver.current_url}")
-        logger.error(f"Page source length: {len(driver.page_source)} characters")
-        driver.save_screenshot("/tmp/deskbird_no_button_found.png")
-        logger.debug("Screenshot saved: /tmp/deskbird_no_button_found.png")
-        
-        # Search for "book" in page source
-        page_lower = driver.page_source.lower()
-        if "book" in page_lower:
-            logger.info("Found 'book' in page source. Contexts:")
-            import re
-            matches = re.finditer(r'.{0,100}book.{0,100}', page_lower, re.IGNORECASE)
-            for i, match in enumerate(matches):
-                if i < 10:  # Show first 10 matches
-                    logger.info(f"  Match {i+1}: ...{match.group()}...")
-        else:
-            logger.error("'book' not found anywhere in page source")
-        
-        logger.info("Page source (first 5000 chars):")
-        logger.info(driver.page_source[:5000])
+        try:
+            logger.error(f"Current URL: {driver.current_url}")
+            logger.error(f"Page source length: {len(driver.page_source)} characters")
+            driver.save_screenshot("/tmp/deskbird_no_button_found.png")
+            logger.debug("Screenshot saved: /tmp/deskbird_no_button_found.png")
+            
+            # Search for "book" in page source
+            page_lower = driver.page_source.lower()
+            if "book" in page_lower:
+                logger.info("Found 'book' in page source. Contexts:")
+                import re
+                matches = re.finditer(r'.{0,100}book.{0,100}', page_lower, re.IGNORECASE)
+                for i, match in enumerate(matches):
+                    if i < 10:  # Show first 10 matches
+                        logger.info(f"  Match {i+1}: ...{match.group()}...")
+            else:
+                logger.error("'book' not found anywhere in page source")
+            
+            logger.info("Page source (first 5000 chars):")
+            logger.info(driver.page_source[:5000])
+        except Exception as e:
+            logger.error(f"Could not get debug info (driver may have crashed): {str(e)[:100]}")
         raise Exception("Could not find Quick book button")
     
     # Step 8: Enable "Full day" toggle if it exists and is disabled

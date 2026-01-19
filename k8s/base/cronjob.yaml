@@ -49,4 +49,12 @@ spec:
               limits:
                 memory: "1Gi"
                 cpu: "0.75"
+            volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+          volumes:
+          - name: dshm
+            emptyDir:
+              medium: Memory
+              sizeLimit: 512Mi
           restartPolicy: OnFailure
