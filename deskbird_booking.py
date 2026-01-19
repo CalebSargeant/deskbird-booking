@@ -308,6 +308,18 @@ try:
     driver.save_screenshot("/tmp/deskbird_booking_page.png")
     logger.debug("Screenshot saved: /tmp/deskbird_booking_page.png")
     
+    # Step 6c: Check if already booked
+    logger.info("Step 6c: Checking if already booked for this date")
+    try:
+        # Look for existing booking indicator
+        existing_booking = driver.find_element(By.XPATH, "//div[contains(@class, 'booking') or contains(., 'Booked')]")
+        if existing_booking:
+            logger.info("✓ Desk already booked for this date - no action needed")
+            driver.quit()
+            exit(0)
+    except:
+        logger.debug("No existing booking found, proceeding with booking attempt")
+    
     # Step 7: Click the first available "Quick book" button
     logger.info("Step 7: Looking for booking button")
     
@@ -346,17 +358,17 @@ try:
         # Search for "book" in page source
         page_lower = driver.page_source.lower()
         if "book" in page_lower:
-            logger.debug("Found 'book' in page source. Contexts:")
+            logger.info("Found 'book' in page source. Contexts:")
             import re
             matches = re.finditer(r'.{0,100}book.{0,100}', page_lower, re.IGNORECASE)
             for i, match in enumerate(matches):
                 if i < 10:  # Show first 10 matches
-                    logger.debug(f"  Match {i+1}: ...{match.group()}...")
+                    logger.info(f"  Match {i+1}: ...{match.group()}...")
         else:
             logger.error("'book' not found anywhere in page source")
         
-        logger.debug("Page source (first 5000 chars):")
-        logger.debug(driver.page_source[:5000])
+        logger.info("Page source (first 5000 chars):")
+        logger.info(driver.page_source[:5000])
         raise Exception("Could not find Quick book button")
     
     # Step 8: Enable "Full day" toggle if it exists and is disabled
