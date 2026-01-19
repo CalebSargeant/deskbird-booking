@@ -435,11 +435,17 @@ try:
 except Exception as e:
     logger.error(f"Error occurred: {str(e)}")
     logger.error(f"Error type: {type(e).__name__}")
-    # Take a screenshot for debugging
-    driver.save_screenshot("/tmp/deskbird_error.png")
-    logger.debug("Error screenshot saved: /tmp/deskbird_error.png")
+    # Take a screenshot for debugging if driver is still active
+    try:
+        driver.save_screenshot("/tmp/deskbird_error.png")
+        logger.debug("Error screenshot saved: /tmp/deskbird_error.png")
+    except:
+        logger.debug("Could not save error screenshot (driver may be closed)")
     raise
 finally:
-    logger.info("Closing browser")
-    driver.quit()
-    logger.info("Browser closed")
+    try:
+        logger.info("Closing browser")
+        driver.quit()
+        logger.info("Browser closed")
+    except:
+        logger.debug("Browser already closed")
