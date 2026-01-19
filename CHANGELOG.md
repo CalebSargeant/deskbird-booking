@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.4 (2026-01-19)
+
+### Chores
+
+- Update deskbird-booking image
+  ([`e2d9352`](https://github.com/CalebSargeant/deskbird-booking/commit/e2d9352a65340e9a380197ed0de74f675221a0fa))
+
+
 ## v1.8.3 (2026-01-19)
 
 ### Chores
