@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   name: deskbird-booking
 spec:
-  schedule: "0 8 * * 1,4"  # Run every Monday and Thursday at 8 AM UTC
+  schedule: "0 1 * * 1,4"  # Run every Monday and Thursday at 1 AM UTC
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   jobTemplate:
