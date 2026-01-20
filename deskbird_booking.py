@@ -219,13 +219,14 @@ try:
         logger.info("OTP submitted successfully")
         
         # After OTP, check for "Stay signed in?" prompt
-        time.sleep(2)  # Wait for next page
+        time.sleep(3)  # Wait for next page (increased from 2 to 3)
         try:
-            yes_button = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, "//input[@type='submit' and @value='Yes']"))
+            yes_button = WebDriverWait(driver, 10).until(  # Increased from 5 to 10
+                EC.presence_of_element_located((By.XPATH, "//input[@type='submit' and @value='Yes']")
             )
             logger.info("Found 'Stay signed in?' prompt after OTP, clicking Yes")
             yes_button.click()
+            time.sleep(2)  # Give it time to process
         except:
             logger.debug("No 'Stay signed in' prompt found after OTP")
             pass
@@ -242,7 +243,7 @@ try:
     
     # Wait for authentication to complete - popup should close automatically
     logger.info("Waiting for authentication to complete")
-    WebDriverWait(driver, 30).until(
+    WebDriverWait(driver, 60).until(  # Increased from 30 to 60 for cluster environment
         lambda d: len(d.window_handles) == 1
     )
     logger.debug("Popup closed, switching to main window")
@@ -251,7 +252,7 @@ try:
     driver.switch_to.window(driver.window_handles[0])
     
     # Wait for redirect to complete on main window  
-    WebDriverWait(driver, 30).until(
+    WebDriverWait(driver, 60).until(  # Increased from 30 to 60 for cluster environment
         lambda d: "login" not in d.current_url and "deskbird.com" in d.current_url
     )
     logger.info(f"Authentication successful! Current URL: {driver.current_url}")
