@@ -222,7 +222,7 @@ try:
         time.sleep(3)  # Wait for next page (increased from 2 to 3)
         try:
             yes_button = WebDriverWait(driver, 10).until(  # Increased from 5 to 10
-                EC.presence_of_element_located((By.XPATH, "//input[@type='submit' and @value='Yes']")
+                EC.presence_of_element_located((By.XPATH, "//input[@type='submit' and @value='Yes']"))
             )
             logger.info("Found 'Stay signed in?' prompt after OTP, clicking Yes")
             yes_button.click()
