@@ -6,4 +6,4 @@ resources:
   - secret.enc.yaml
 images:
   - name: ghcr.io/calebsargeant/deskbird-booking
-    newTag: v1.9.1 # {"$imagepolicy": "flux-system:deskbird-booking:tag"}
+    newTag: v1.9.2 # {"$imagepolicy": "flux-system:deskbird-booking:tag"}
