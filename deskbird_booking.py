@@ -3,6 +3,7 @@ import time
 import subprocess
 import logging
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -183,8 +184,9 @@ try:
 
     def is_microsoft_login_active():
         """Check if we've already reached the Microsoft login flow."""
-        current_url = driver.current_url.lower()
-        if "microsoftonline.com" in current_url or "live.com" in current_url:
+        parsed = urlparse(driver.current_url)
+        hostname = (parsed.hostname or "").lower()
+        if hostname.endswith("microsoftonline.com") or hostname.endswith("live.com"):
             return True
         return bool(driver.find_elements(By.CSS_SELECTOR, "input[name='loginfmt'], input[type='email']"))
 
@@ -224,6 +226,7 @@ try:
             except TimeoutException:
                 continue
 
+    # Re-check after selector attempts because some flows auto-redirect asynchronously.
     if not microsoft_clicked and is_microsoft_login_active():
         logger.info("Microsoft login detected after fallback checks; continuing")
         microsoft_clicked = True
