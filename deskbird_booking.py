@@ -123,23 +123,101 @@ try:
     
     # Step 2: Click "Sign in" button
     logger.info("Step 2: Clicking 'Sign in' button")
-    signin_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Sign in')]"))
-    )
-    signin_button.click()
-    logger.debug("Sign in button clicked")
+    driver.save_screenshot("/tmp/deskbird_before_signin.png")
+    logger.debug("Screenshot saved: /tmp/deskbird_before_signin.png")
+    
+    # Try multiple selectors for the Sign in button (UI may change over time)
+    signin_selectors = [
+        (By.XPATH, "//button[contains(., 'Sign in')]"),
+        (By.XPATH, "//button[contains(., 'Log in')]"),
+        (By.XPATH, "//button[contains(., 'Continue')]"),
+        (By.XPATH, "//a[contains(., 'Sign in')]"),
+        (By.XPATH, "//a[contains(., 'Log in')]"),
+        (By.XPATH, "//a[contains(., 'Continue')]"),
+        (By.XPATH, "//input[@type='submit' and (contains(@value, 'Sign in') or contains(@value, 'Log in') or contains(@value, 'Continue'))]"),
+        (By.CSS_SELECTOR, "button[type='submit']"),
+        (By.CSS_SELECTOR, "form button"),
+    ]
+    
+    signin_clicked = False
+    for by_method, selector in signin_selectors:
+        try:
+            logger.debug(f"Trying sign-in selector: {by_method} / {selector}")
+            signin_button = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((by_method, selector))
+            )
+            logger.info(f"Found sign-in button with {by_method}: {selector}")
+            signin_button.click()
+            logger.debug("Sign in button clicked")
+            signin_clicked = True
+            break
+        except Exception:
+            continue
+    
+    if not signin_clicked:
+        # Log page source for debugging before failing
+        logger.error("Could not find sign-in button with any selector")
+        logger.debug(f"Current URL: {driver.current_url}")
+        driver.save_screenshot("/tmp/deskbird_signin_not_found.png")
+        logger.debug("Screenshot saved: /tmp/deskbird_signin_not_found.png")
+        page_src = driver.page_source
+        logger.debug(f"Page source length: {len(page_src)} characters")
+        # Log all clickable elements for debugging
+        try:
+            clickable = driver.find_elements(By.XPATH, "//button | //a | //input[@type='submit']")
+            for elem in clickable[:20]:
+                logger.debug(f"Clickable element: <{elem.tag_name}> text='{elem.text[:80]}' type='{elem.get_attribute('type')}' href='{elem.get_attribute('href')}'")
+        except Exception:
+            pass
+        raise Exception("Could not find Sign in button on login page")
     
     # Wait for the Microsoft SSO button to appear
     time.sleep(2)
     logger.debug(f"Current URL: {driver.current_url}")
+    driver.save_screenshot("/tmp/deskbird_after_signin_click.png")
+    logger.debug("Screenshot saved: /tmp/deskbird_after_signin_click.png")
     
     # Step 2b: Click "Sign in with Microsoft" button
     logger.info("Step 2b: Clicking 'Sign in with Microsoft' button")
-    microsoft_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Sign in with Microsoft')]"))
-    )
-    microsoft_button.click()
-    logger.debug("Microsoft SSO button clicked")
+    
+    # Try multiple selectors for the Microsoft SSO button
+    microsoft_selectors = [
+        (By.XPATH, "//button[contains(., 'Sign in with Microsoft')]"),
+        (By.XPATH, "//button[contains(., 'Microsoft')]"),
+        (By.XPATH, "//a[contains(., 'Sign in with Microsoft')]"),
+        (By.XPATH, "//a[contains(., 'Microsoft')]"),
+        (By.XPATH, "//button[contains(., 'SSO')]"),
+        (By.XPATH, "//a[contains(., 'SSO')]"),
+        (By.CSS_SELECTOR, "button[class*='microsoft'], a[class*='microsoft']"),
+        (By.CSS_SELECTOR, "button[class*='sso'], a[class*='sso']"),
+    ]
+    
+    microsoft_clicked = False
+    for by_method, selector in microsoft_selectors:
+        try:
+            logger.debug(f"Trying Microsoft SSO selector: {by_method} / {selector}")
+            microsoft_button = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((by_method, selector))
+            )
+            logger.info(f"Found Microsoft SSO button with {by_method}: {selector}")
+            microsoft_button.click()
+            logger.debug("Microsoft SSO button clicked")
+            microsoft_clicked = True
+            break
+        except Exception:
+            continue
+    
+    if not microsoft_clicked:
+        logger.error("Could not find Microsoft SSO button with any selector")
+        driver.save_screenshot("/tmp/deskbird_microsoft_not_found.png")
+        logger.debug("Screenshot saved: /tmp/deskbird_microsoft_not_found.png")
+        try:
+            clickable = driver.find_elements(By.XPATH, "//button | //a | //input[@type='submit']")
+            for elem in clickable[:20]:
+                logger.debug(f"Clickable element: <{elem.tag_name}> text='{elem.text[:80]}' type='{elem.get_attribute('type')}' href='{elem.get_attribute('href')}'")
+        except Exception:
+            pass
+        raise Exception("Could not find Microsoft SSO button on login page")
     
     # Wait for popup window and switch to it
     time.sleep(3)
