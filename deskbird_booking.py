@@ -181,7 +181,7 @@ try:
     # Step 2b: Click "Sign in with Microsoft" button (or continue if already redirected)
     logger.info("Step 2b: Clicking 'Sign in with Microsoft' button")
 
-    def is_microsoft_login_active():
+    def is_microsoft_login_active(web_driver):
         """Check if we've already reached the Microsoft login flow."""
         microsoft_indicators = [
             (By.CSS_SELECTOR, "input[name='loginfmt']"),
@@ -191,12 +191,12 @@ try:
             (By.CSS_SELECTOR, "form[action*='login.microsoftonline.com']"),
         ]
         for by_method, selector in microsoft_indicators:
-            if driver.find_elements(by_method, selector):
+            if web_driver.find_elements(by_method, selector):
                 return True
         return False
 
     microsoft_clicked = False
-    if is_microsoft_login_active():
+    if is_microsoft_login_active(driver):
         logger.info("Microsoft login already active; skipping SSO button click")
         microsoft_clicked = True
     else:
@@ -217,22 +217,27 @@ try:
             (By.XPATH, "//a[contains(@href, 'login.microsoftonline.com')]"),
         ]
 
-        for by_method, selector in microsoft_selectors:
-            try:
+        deadline = time.time() + 20
+        while time.time() < deadline and not microsoft_clicked:
+            for by_method, selector in microsoft_selectors:
                 logger.debug(f"Trying Microsoft SSO selector: {by_method} / {selector}")
-                microsoft_button = WebDriverWait(driver, 5).until(
-                    EC.element_to_be_clickable((by_method, selector))
-                )
-                logger.info(f"Found Microsoft SSO button with {by_method}: {selector}")
-                microsoft_button.click()
-                logger.debug("Microsoft SSO button clicked")
-                microsoft_clicked = True
-                break
-            except TimeoutException:
-                continue
+                for microsoft_button in driver.find_elements(by_method, selector):
+                    try:
+                        if microsoft_button.is_displayed() and microsoft_button.is_enabled():
+                            logger.info(f"Found Microsoft SSO button with {by_method}: {selector}")
+                            microsoft_button.click()
+                            logger.debug("Microsoft SSO button clicked")
+                            microsoft_clicked = True
+                            break
+                    except Exception:
+                        continue
+                if microsoft_clicked:
+                    break
+            if not microsoft_clicked:
+                time.sleep(0.5)
 
     # Re-check after selector attempts because some flows auto-redirect asynchronously.
-    if not microsoft_clicked and is_microsoft_login_active():
+    if not microsoft_clicked and is_microsoft_login_active(driver):
         logger.info("Microsoft login detected after fallback checks; continuing")
         microsoft_clicked = True
 
