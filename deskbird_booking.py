@@ -178,36 +178,56 @@ try:
     driver.save_screenshot("/tmp/deskbird_after_signin_click.png")
     logger.debug("Screenshot saved: /tmp/deskbird_after_signin_click.png")
     
-    # Step 2b: Click "Sign in with Microsoft" button
+    # Step 2b: Click "Sign in with Microsoft" button (or continue if already redirected)
     logger.info("Step 2b: Clicking 'Sign in with Microsoft' button")
-    
-    # Try multiple selectors for the Microsoft SSO button
-    microsoft_selectors = [
-        (By.XPATH, "//button[contains(., 'Sign in with Microsoft')]"),
-        (By.XPATH, "//button[contains(., 'Microsoft')]"),
-        (By.XPATH, "//a[contains(., 'Sign in with Microsoft')]"),
-        (By.XPATH, "//a[contains(., 'Microsoft')]"),
-        (By.XPATH, "//button[contains(., 'SSO')]"),
-        (By.XPATH, "//a[contains(., 'SSO')]"),
-        (By.CSS_SELECTOR, "button[class*='microsoft'], a[class*='microsoft']"),
-        (By.CSS_SELECTOR, "button[class*='sso'], a[class*='sso']"),
-    ]
-    
+
+    def is_microsoft_login_active():
+        """Check if we've already reached the Microsoft login flow."""
+        current_url = driver.current_url.lower()
+        if "microsoftonline.com" in current_url or "live.com" in current_url:
+            return True
+        return bool(driver.find_elements(By.CSS_SELECTOR, "input[name='loginfmt'], input[type='email']"))
+
     microsoft_clicked = False
-    for by_method, selector in microsoft_selectors:
-        try:
-            logger.debug(f"Trying Microsoft SSO selector: {by_method} / {selector}")
-            microsoft_button = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((by_method, selector))
-            )
-            logger.info(f"Found Microsoft SSO button with {by_method}: {selector}")
-            microsoft_button.click()
-            logger.debug("Microsoft SSO button clicked")
-            microsoft_clicked = True
-            break
-        except TimeoutException:
-            continue
-    
+    if is_microsoft_login_active():
+        logger.info("Microsoft login already active; skipping SSO button click")
+        microsoft_clicked = True
+    else:
+        # Try multiple selectors for the Microsoft SSO button
+        microsoft_selectors = [
+            (By.XPATH, "//button[contains(., 'Sign in with Microsoft')]"),
+            (By.XPATH, "//button[contains(., 'Continue with Microsoft')]"),
+            (By.XPATH, "//button[contains(., 'Microsoft')]"),
+            (By.XPATH, "//a[contains(., 'Sign in with Microsoft')]"),
+            (By.XPATH, "//a[contains(., 'Continue with Microsoft')]"),
+            (By.XPATH, "//a[contains(., 'Microsoft')]"),
+            (By.XPATH, "//*[@role='button' and contains(., 'Microsoft')]"),
+            (By.XPATH, "//button[contains(., 'SSO')]"),
+            (By.XPATH, "//a[contains(., 'SSO')]"),
+            (By.CSS_SELECTOR, "button[class*='microsoft'], a[class*='microsoft']"),
+            (By.CSS_SELECTOR, "button[class*='sso'], a[class*='sso']"),
+            (By.XPATH, "//a[contains(@href, 'microsoft')]"),
+            (By.XPATH, "//a[contains(@href, 'login.microsoftonline.com')]"),
+        ]
+
+        for by_method, selector in microsoft_selectors:
+            try:
+                logger.debug(f"Trying Microsoft SSO selector: {by_method} / {selector}")
+                microsoft_button = WebDriverWait(driver, 3).until(
+                    EC.element_to_be_clickable((by_method, selector))
+                )
+                logger.info(f"Found Microsoft SSO button with {by_method}: {selector}")
+                microsoft_button.click()
+                logger.debug("Microsoft SSO button clicked")
+                microsoft_clicked = True
+                break
+            except TimeoutException:
+                continue
+
+    if not microsoft_clicked and is_microsoft_login_active():
+        logger.info("Microsoft login detected after fallback checks; continuing")
+        microsoft_clicked = True
+
     if not microsoft_clicked:
         logger.error("Could not find Microsoft SSO button with any selector")
         driver.save_screenshot("/tmp/deskbird_microsoft_not_found.png")
