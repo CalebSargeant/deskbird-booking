@@ -9,7 +9,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import (
+    TimeoutException,
+    StaleElementReferenceException,
+    ElementNotInteractableException,
+    ElementClickInterceptedException,
+)
 
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -19,6 +24,9 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
+
+MICROSOFT_SSO_TIMEOUT_SECONDS = 20
+MICROSOFT_SSO_POLL_INTERVAL_SECONDS = 0.5
 
 # Get credentials from 1Password CLI
 def get_1password_field(item_name, field_name, vault="Private"):
@@ -217,7 +225,7 @@ try:
             (By.XPATH, "//a[contains(@href, 'login.microsoftonline.com')]"),
         ]
 
-        deadline = time.time() + 20
+        deadline = time.time() + MICROSOFT_SSO_TIMEOUT_SECONDS
         while time.time() < deadline and not microsoft_clicked:
             for by_method, selector in microsoft_selectors:
                 logger.debug(f"Trying Microsoft SSO selector: {by_method} / {selector}")
@@ -229,12 +237,16 @@ try:
                             logger.debug("Microsoft SSO button clicked")
                             microsoft_clicked = True
                             break
-                    except Exception:
+                    except (
+                        StaleElementReferenceException,
+                        ElementNotInteractableException,
+                        ElementClickInterceptedException,
+                    ):
                         continue
                 if microsoft_clicked:
                     break
             if not microsoft_clicked:
-                time.sleep(0.5)
+                time.sleep(MICROSOFT_SSO_POLL_INTERVAL_SECONDS)
 
     # Re-check after selector attempts because some flows auto-redirect asynchronously.
     if not microsoft_clicked and is_microsoft_login_active(driver):
