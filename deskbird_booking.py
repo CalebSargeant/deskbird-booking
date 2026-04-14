@@ -3,7 +3,6 @@ import time
 import subprocess
 import logging
 from datetime import datetime, timedelta
-from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -184,11 +183,17 @@ try:
 
     def is_microsoft_login_active():
         """Check if we've already reached the Microsoft login flow."""
-        parsed = urlparse(driver.current_url)
-        hostname = (parsed.hostname or "").lower()
-        if hostname.endswith("microsoftonline.com") or hostname.endswith("live.com"):
-            return True
-        return bool(driver.find_elements(By.CSS_SELECTOR, "input[name='loginfmt'], input[type='email']"))
+        microsoft_indicators = [
+            (By.CSS_SELECTOR, "input[name='loginfmt']"),
+            (By.CSS_SELECTOR, "input[name='passwd']"),
+            (By.CSS_SELECTOR, "input#i0116"),
+            (By.CSS_SELECTOR, "input#i0118"),
+            (By.CSS_SELECTOR, "form[action*='login.microsoftonline.com']"),
+        ]
+        for by_method, selector in microsoft_indicators:
+            if driver.find_elements(by_method, selector):
+                return True
+        return False
 
     microsoft_clicked = False
     if is_microsoft_login_active():
@@ -215,7 +220,7 @@ try:
         for by_method, selector in microsoft_selectors:
             try:
                 logger.debug(f"Trying Microsoft SSO selector: {by_method} / {selector}")
-                microsoft_button = WebDriverWait(driver, 3).until(
+                microsoft_button = WebDriverWait(driver, 5).until(
                     EC.element_to_be_clickable((by_method, selector))
                 )
                 logger.info(f"Found Microsoft SSO button with {by_method}: {selector}")
