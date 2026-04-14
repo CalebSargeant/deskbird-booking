@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v1.9.5 (2026-04-14)
+
+### Bug Fixes
+
+- Improve Sign in button detection with multiple selectors and better debugging
+  ([`e61c0c0`](https://github.com/CalebSargeant/deskbird-booking/commit/e61c0c01268d4980ea56371a17b9986afd0c0864))
+
+- Use TimeoutException instead of bare Exception in selector loops
+  ([`cdc6bd1`](https://github.com/CalebSargeant/deskbird-booking/commit/cdc6bd11fa34add4c8e529e9ece8d475dd3e122b))
+
+### Chores
+
+- Update deskbird-booking image
+  ([`cdd99d8`](https://github.com/CalebSargeant/deskbird-booking/commit/cdd99d8fffcc29e505c80193034807db41252374))
+
+
 ## v1.9.4 (2026-01-20)
 
 ### Chores
