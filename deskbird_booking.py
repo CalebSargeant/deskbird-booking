@@ -9,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import TimeoutException
 
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -151,7 +152,7 @@ try:
             logger.debug("Sign in button clicked")
             signin_clicked = True
             break
-        except Exception:
+        except TimeoutException:
             continue
     
     if not signin_clicked:
@@ -204,7 +205,7 @@ try:
             logger.debug("Microsoft SSO button clicked")
             microsoft_clicked = True
             break
-        except Exception:
+        except TimeoutException:
             continue
     
     if not microsoft_clicked:
