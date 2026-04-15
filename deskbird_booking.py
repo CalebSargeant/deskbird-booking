@@ -2,6 +2,7 @@ import os
 import time
 import subprocess
 import logging
+from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -191,6 +192,9 @@ try:
 
     def is_microsoft_login_active(web_driver):
         """Check if we've already reached the Microsoft login flow."""
+        parsed = urlparse(web_driver.current_url)
+        if parsed.hostname and parsed.hostname.endswith("microsoftonline.com"):
+            return True
         microsoft_indicators = [
             (By.CSS_SELECTOR, "input[name='loginfmt']"),
             (By.CSS_SELECTOR, "input[name='passwd']"),
@@ -227,6 +231,10 @@ try:
 
         deadline = time.time() + MICROSOFT_SSO_TIMEOUT_SECONDS
         while time.time() < deadline and not microsoft_clicked:
+            if is_microsoft_login_active(driver):
+                logger.info("Microsoft login detected during polling; skipping SSO button click")
+                microsoft_clicked = True
+                break
             for by_method, selector in microsoft_selectors:
                 logger.debug(f"Trying Microsoft SSO selector: {by_method} / {selector}")
                 for microsoft_button in driver.find_elements(by_method, selector):
