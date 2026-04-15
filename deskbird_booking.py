@@ -26,8 +26,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-MICROSOFT_SSO_TIMEOUT_SECONDS = 20
+MICROSOFT_SSO_TIMEOUT_SECONDS = 45
 MICROSOFT_SSO_POLL_INTERVAL_SECONDS = 0.5
+BOOKING_TIME_CANDIDATES = [
+    (8, 17),   # Common office-hours full-day span
+    (8, 18),   # Some offices allow bookings until 18:00
+    (9, 17),   # Conservative fallback
+]
 
 # Get credentials from 1Password CLI
 def get_1password_field(item_name, field_name, vault="Private"):
@@ -193,13 +198,21 @@ try:
     def is_microsoft_login_active(web_driver):
         """Check if we've already reached the Microsoft login flow."""
         parsed = urlparse(web_driver.current_url)
-        if parsed.hostname and parsed.hostname.endswith("microsoftonline.com"):
+        hostname = (parsed.hostname or "").lower()
+        microsoft_hosts = (
+            "microsoftonline.com",
+            "live.com",
+            "office.com",
+        )
+        if hostname and any(hostname.endswith(domain) for domain in microsoft_hosts):
             return True
         microsoft_indicators = [
             (By.CSS_SELECTOR, "input[name='loginfmt']"),
             (By.CSS_SELECTOR, "input[name='passwd']"),
             (By.CSS_SELECTOR, "input#i0116"),
             (By.CSS_SELECTOR, "input#i0118"),
+            (By.CSS_SELECTOR, "input[name='otc']"),
+            (By.CSS_SELECTOR, "input#idSIButton9"),
             (By.CSS_SELECTOR, "form[action*='login.microsoftonline.com']"),
         ]
         for by_method, selector in microsoft_indicators:
@@ -207,8 +220,26 @@ try:
                 return True
         return False
 
+    def switch_to_microsoft_window(web_driver):
+        """
+        Switch to a window that already contains Microsoft auth flow.
+        Returns True if such a window is found.
+        """
+        original_window = web_driver.current_window_handle
+        for handle in web_driver.window_handles:
+            try:
+                web_driver.switch_to.window(handle)
+                if is_microsoft_login_active(web_driver):
+                    if handle != original_window:
+                        logger.info("Microsoft login detected in popup window")
+                    return True
+            except Exception:
+                continue
+        web_driver.switch_to.window(original_window)
+        return False
+
     microsoft_clicked = False
-    if is_microsoft_login_active(driver):
+    if switch_to_microsoft_window(driver):
         logger.info("Microsoft login already active; skipping SSO button click")
         microsoft_clicked = True
     else:
@@ -227,11 +258,15 @@ try:
             (By.CSS_SELECTOR, "button[class*='sso'], a[class*='sso']"),
             (By.XPATH, "//a[contains(@href, 'microsoft')]"),
             (By.XPATH, "//a[contains(@href, 'login.microsoftonline.com')]"),
+            (By.XPATH, "//button[contains(., 'work') or contains(., 'Work')]"),
+            (By.XPATH, "//a[contains(., 'work') or contains(., 'Work')]"),
         ]
 
         deadline = time.time() + MICROSOFT_SSO_TIMEOUT_SECONDS
         while time.time() < deadline and not microsoft_clicked:
-            if is_microsoft_login_active(driver):
+            # In some Deskbird flows the Step 2 click directly opens Microsoft auth,
+            # either by redirect or by popup, without rendering another SSO button.
+            if switch_to_microsoft_window(driver):
                 logger.info("Microsoft login detected during polling; skipping SSO button click")
                 microsoft_clicked = True
                 break
@@ -257,7 +292,7 @@ try:
                 time.sleep(MICROSOFT_SSO_POLL_INTERVAL_SECONDS)
 
     # Re-check after selector attempts because some flows auto-redirect asynchronously.
-    if not microsoft_clicked and is_microsoft_login_active(driver):
+    if not microsoft_clicked and switch_to_microsoft_window(driver):
         logger.info("Microsoft login detected after fallback checks; continuing")
         microsoft_clicked = True
 
@@ -276,7 +311,7 @@ try:
     # Wait for popup window and switch to it
     time.sleep(3)
     logger.debug(f"Number of windows: {len(driver.window_handles)}")
-    if len(driver.window_handles) > 1:
+    if len(driver.window_handles) > 1 and not is_microsoft_login_active(driver):
         logger.info("Switching to Microsoft SSO popup window")
         driver.switch_to.window(driver.window_handles[-1])
     
@@ -395,12 +430,18 @@ try:
     booking_date = today + timedelta(days=7)  # Book for this day next week (7 days ahead from today)
     logger.info(f"Booking for date: {booking_date.strftime('%Y-%m-%d %A')}")
     
-    # Convert to epoch milliseconds for full day (7am to 7pm)
-    start_of_day = booking_date.replace(hour=6, minute=0, second=0, microsecond=0)
-    end_of_day = booking_date.replace(hour=18, minute=0, second=0, microsecond=0)
-    start_time = int(start_of_day.timestamp() * 1000)
-    end_time = int(end_of_day.timestamp() * 1000)
-    logger.debug(f"Booking time range: {start_of_day} to {end_of_day}")
+    # Convert to epoch milliseconds for an office-hours-compatible full day.
+    # Some offices reject an end-time outside configured opening hours.
+    def build_booking_url(start_hour, end_hour):
+        start_of_day = booking_date.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+        end_of_day = booking_date.replace(hour=end_hour, minute=0, second=0, microsecond=0)
+        start_time = int(start_of_day.timestamp() * 1000)
+        end_time = int(end_of_day.timestamp() * 1000)
+        return (
+            f"https://app.deskbird.com/office/{OFFICE_ID}/bookings/dashboard"
+            f"?floorId={FLOOR_ID}&viewType=card&areaType=flexDesk"
+            f"&startTime={start_time}&endTime={end_time}&isFullDay=true"
+        ), start_of_day, end_of_day
     
     # First navigate to the main booking dashboard to ensure sidebar loads
     logger.info("Step 6a: Navigating to main booking dashboard")
@@ -409,17 +450,31 @@ try:
     time.sleep(5)  # Wait for initial load
     logger.debug("Main dashboard loaded")
     
-    # Now navigate to the specific date
-    booking_url = f"https://app.deskbird.com/office/{OFFICE_ID}/bookings/dashboard?floorId={FLOOR_ID}&viewType=card&areaType=flexDesk&startTime={start_time}&endTime={end_time}&isFullDay=true"
-    
+    # Now navigate to the specific date with a valid time range.
     logger.info(f"Step 6b: Navigating to booking page for {booking_date.strftime('%Y-%m-%d')}")
     logger.debug(f"Floor ID: {FLOOR_ID}")
-    logger.debug(f"Booking URL: {booking_url}")
-    driver.get(booking_url)
-    
-    # Wait for page to fully load - wait for desk cards to appear
-    logger.info("Waiting for desk availability to load")
-    time.sleep(10)  # Give the Angular app time to fully render
+
+    booking_url = None
+    for start_hour, end_hour in BOOKING_TIME_CANDIDATES:
+        candidate_url, candidate_start, candidate_end = build_booking_url(start_hour, end_hour)
+        logger.info(
+            f"Trying booking window {candidate_start.strftime('%H:%M')} - {candidate_end.strftime('%H:%M')}"
+        )
+        logger.debug(f"Booking URL: {candidate_url}")
+        driver.get(candidate_url)
+        logger.info("Waiting for desk availability to load")
+        time.sleep(8)  # Give the Angular app time to render
+
+        page_text = (driver.page_source or "").lower()
+        if "end time of booking is invalid" in page_text:
+            logger.warning("Deskbird rejected booking end time; trying fallback window")
+            continue
+
+        booking_url = candidate_url
+        break
+
+    if not booking_url:
+        raise Exception("Could not find a valid booking time range accepted by Deskbird")
     
     # Wait for the main content area to load
     try:

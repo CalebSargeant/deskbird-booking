@@ -26,9 +26,9 @@ Automated desk booking for Deskbird using Selenium and Kubernetes CronJob. This 
 
 ### Booking Logic
 
-- Calculates booking date (4 days ahead for Friday bookings)
+- Calculates booking date (7 days ahead)
 - Navigates to your configured office and floor
-- Books a full-day desk (6 AM - 6 PM)
+- Uses an office-hours-compatible full-day window (with fallback time ranges if needed)
 - **Preferred desk support**: Attempts to book your preferred desk first (if configured)
 - **Fallback**: Books any available desk if preferred is unavailable
 - Saves debugging screenshots on failure
@@ -58,6 +58,61 @@ The script uses 1Password CLI to fetch credentials at runtime, making it fully c
    - Extract IDs from URL: `https://app.deskbird.com/office/{OFFICE_ID}/bookings/dashboard?floorId={FLOOR_ID}...`
 
 3. **Configure the Kubernetes secret** (see deployment section below)
+
+## Local End-to-End Testing
+
+Use this procedure to validate a real booking flow locally before opening a PR.
+
+### Prerequisites
+
+- Docker is installed and running
+- `secret.yaml` exists in repository root and includes:
+  - `OP_SERVICE_ACCOUNT_TOKEN`
+  - `OP_ITEM_NAME` (for example `Microsoft`)
+- `.env` exists in repository root and includes:
+  - `OFFICE_ID`
+  - `FLOOR_ID`
+  - optional `PREFERRED_DESK`
+
+### 1) Build the local test image
+
+```bash
+docker build -t deskbird-booking:local-test .
+```
+
+### 2) Run the end-to-end booking test
+
+This command reads the 1Password token from `secret.yaml`, passes office/floor config from `.env`, and runs the full login + booking flow:
+
+```bash
+OP_SERVICE_ACCOUNT_TOKEN=$(python3 - <<'PY'
+from pathlib import Path
+for line in Path('secret.yaml').read_text().splitlines():
+    if line.strip().startswith('OP_SERVICE_ACCOUNT_TOKEN:'):
+        print(line.split(':', 1)[1].strip())
+        break
+PY
+) && docker run --rm \
+  --env-file .env \
+  -e OP_SERVICE_ACCOUNT_TOKEN="$OP_SERVICE_ACCOUNT_TOKEN" \
+  -e OP_ITEM_NAME="Microsoft" \
+  -e OP_VAULT="REDACTED" \
+  -e LOG_LEVEL="INFO" \
+  -v "$(pwd)/e2e-artifacts:/tmp" \
+  deskbird-booking:local-test
+```
+
+### 3) Verify success
+
+Successful booking run should end with:
+
+- `✓ Clicked 'Quick book' button - booked any available desk`
+- `✓ Booking completed successfully!`
+
+If the run fails:
+
+- Inspect logs for the failing step
+- Review screenshots in `e2e-artifacts/deskbird_*.png`
 
 ## Deployment
 
