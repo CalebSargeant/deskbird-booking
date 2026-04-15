@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.9.7 (2026-04-15)
+
+### Bug Fixes
+
+- Detect Microsoft login redirect by URL hostname, not substring
+  ([`5d79a66`](https://github.com/CalebSargeant/deskbird-booking/commit/5d79a6602a0ce88350dd0f884bf6382ca3f86fea))
+
+### Chores
+
+- Update deskbird-booking image
+  ([`391b12e`](https://github.com/CalebSargeant/deskbird-booking/commit/391b12e05535ddffa7b5b75ee3dc44666a923db4))
+
+
 ## v1.9.6 (2026-04-15)
 
 ### Chores
