@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.10.0 (2026-04-15)
+
+### Chores
+
+- Update deskbird-booking image
+  ([`be42a50`](https://github.com/CalebSargeant/deskbird-booking/commit/be42a5072d72fa10a29e8e9bda172a051875c3e6))
+
+### Features
+
+- Enhance Microsoft SSO handling and booking logic with fallback time ranges
+  ([`776469d`](https://github.com/CalebSargeant/deskbird-booking/commit/776469d55aa595c1d24ca0e431376a109f7c181d))
+
+
 ## v1.9.7 (2026-04-15)
 
 ### Bug Fixes
