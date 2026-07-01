@@ -8,6 +8,12 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      # Retry a couple of times for transient SSO/network hiccups, but don't
+      # hammer the Microsoft login on hard failures.
+      backoffLimit: 2
+      # Hard wall-clock cap so a hung Selenium run (e.g. a stalled page load)
+      # is killed within 15 minutes instead of lingering for days.
+      activeDeadlineSeconds: 900
       template:
         spec:
           imagePullSecrets:
@@ -42,6 +48,11 @@ spec:
                 secretKeyRef:
                   name: deskbird-credentials
                   key: FLOOR_ID
+            - name: PREFERRED_DESK
+              valueFrom:
+                secretKeyRef:
+                  name: deskbird-credentials
+                  key: PREFERRED_DESK
             resources:
               requests:
                 memory: "512Mi"
