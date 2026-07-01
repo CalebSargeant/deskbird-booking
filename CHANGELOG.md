@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v1.10.1 (2026-07-01)
+
+### Bug Fixes
+
+- Repair Deskbird booking auth race and redesigned-UI selectors
+  ([`59a569d`](https://github.com/CalebSargeant/deskbird-booking/commit/59a569d8805124f08d02201027f23e119d3caab5))
+
+### Chores
+
+- Add Claude Code context-optimization stack and MkDocs docs
+  ([`3261abc`](https://github.com/CalebSargeant/deskbird-booking/commit/3261abc8cf271558e39daffbb1c458bfeeb12f5a))
+
+- Update deskbird-booking image
+  ([`3dd03fc`](https://github.com/CalebSargeant/deskbird-booking/commit/3dd03fc1648d65ee3a8177faa9c86f79ed063c5c))
+
+
 ## v1.10.0 (2026-04-15)
 
 ### Chores
