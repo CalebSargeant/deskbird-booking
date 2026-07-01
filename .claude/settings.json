@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/*.pem)",
+      "Read(./**/secret.yaml)",
+      "Read(./**/secrets/**)",
+      "Bash(curl:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(kubectl apply:*)",
+      "Bash(kubectl delete:*)"
+    ]
+  }
+}

@@ -42,3 +42,11 @@ Thumbs.db
 artifacts
 e2e-artifacts
 .env
+
+# MkDocs build output
+site/
+
+# Claude Code scratch / local overrides
+.claude/last_output.txt
+.claude/settings.local.json
+.claude/worktrees/
