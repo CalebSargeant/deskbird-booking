@@ -1,0 +1,69 @@
+{
+  "generated": "2026-07-01T09:44:04Z",
+  "summary": "Single-purpose automation that books a Deskbird desk 7 days in advance using headless Chromium/Selenium, Microsoft SSO, and 1Password-CLI credentials. Almost all behaviour lives in one linear script (deskbird_booking.py) that is packaged as a container and run as a Kubernetes CronJob in the 'automation' namespace of the firefly cluster, deployed via Kustomize + SOPS and reconciled by Flux.",
+  "entrypoints": [
+    "deskbird_booking.py:<module>  (linear script, no main(); container CMD runs it)"
+  ],
+  "modules": {
+    "booking_script": {
+      "path": "deskbird_booking.py",
+      "purpose": "End-to-end booking: read env config, fetch creds + TOTP from 1Password, drive Chromium through Deskbird login + Microsoft SSO, then book a desk 7 days out (preferred desk first, else any available).",
+      "exports": [
+        "get_1password_field", "get_1password_otp", "is_authenticated_url",
+        "is_microsoft_login_active", "switch_to_microsoft_window",
+        "build_booking_url", "card_matches_preferred", "quick_book"
+      ],
+      "depends_on": ["selenium", "op (1Password CLI)", "chromium", "chromedriver"]
+    },
+    "container": {
+      "path": "Dockerfile",
+      "purpose": "python:3.11-slim + chromium + chromium-driver + 1password-cli + selenium; CMD python deskbird_booking.py.",
+      "exports": [],
+      "depends_on": ["deskbird_booking.py"]
+    },
+    "k8s_base": {
+      "path": "k8s/base/cronjob.yaml",
+      "purpose": "CronJob spec: schedule 'Mon & Thu 01:00 UTC', env from deskbird-credentials secret, resource limits, backoffLimit/activeDeadlineSeconds, in-memory /dev/shm volume.",
+      "exports": ["CronJob/deskbird-booking"],
+      "depends_on": ["deskbird-credentials secret", "ghcr.io/calebsargeant/deskbird-booking image"]
+    },
+    "k8s_prod_overlay": {
+      "path": "k8s/overlays/prod",
+      "purpose": "Prod Kustomize overlay: base + SOPS/age-encrypted secret (secret.enc.yaml); pins the image tag via kustomize 'images' (auto-bumped by the Flux imagepolicy annotation).",
+      "exports": [],
+      "depends_on": ["k8s/base", "secret.enc.yaml", ".sops.yaml"]
+    },
+    "ci_release": {
+      "path": ".github/workflows",
+      "purpose": "build-release.yaml runs semantic-release on push to main/staging (skips md/gitignore/LICENSE). container-image-release.yaml builds+pushes the multi-arch (amd64+arm64) GHCR image via docker-bake when a release is published.",
+      "exports": [],
+      "depends_on": ["pyproject.toml", "docker-bake.hcl", "Dockerfile"]
+    }
+  },
+  "callgraph_highlights": [
+    {
+      "caller": "deskbird_booking.py module bootstrap",
+      "calls": ["get_1password_field", "get_1password_otp"],
+      "note": "Runs top-to-bottom at import; RAISES immediately if OFFICE_ID or FLOOR_ID env vars are unset."
+    },
+    {
+      "caller": "auth flow (try block)",
+      "calls": ["is_microsoft_login_active", "switch_to_microsoft_window", "get_1password_otp", "is_authenticated_url"],
+      "note": "is_authenticated_url gates progress past the transient /sign-in/landing + /authenticationHandler pages; loosening it re-introduces the OAuth-callback race that broke every run."
+    },
+    {
+      "caller": "booking flow",
+      "calls": ["build_booking_url", "card_matches_preferred", "quick_book"],
+      "note": "Books via data-testid='booking-suggestions-quick-book'; Deskbird orders suggestions favourite-first, so the first button is the preferred desk when available."
+    }
+  ],
+  "hotspots": [
+    "deskbird_booking.py",
+    "k8s/base/cronjob.yaml",
+    "k8s/overlays/prod/kustomization.yaml",
+    "Dockerfile",
+    "pyproject.toml",
+    ".github/workflows/build-release.yaml",
+    ".github/workflows/container-image-release.yaml"
+  ]
+}
