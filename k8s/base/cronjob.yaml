@@ -3,7 +3,11 @@ kind: CronJob
 metadata:
   name: deskbird-booking
 spec:
-  schedule: "0 1 * * 1,4"  # Run every Monday and Thursday at 1 AM UTC
+  # Runs 01:00 Monday and Thursday, office-local. timeZone must stay set: without it the
+  # controller-manager's own clock decides, which fired 01:00 CEST = 23:00 UTC the previous
+  # day, and the container (UTC) then booked Sundays/Wednesdays instead of Mondays/Thursdays.
+  schedule: "0 1 * * 1,4"
+  timeZone: "Europe/Amsterdam"
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   jobTemplate:
@@ -17,6 +21,14 @@ spec:
             image: ghcr.io/calebsargeant/deskbird-booking:latest
             imagePullPolicy: Always
             env:
+            # Guard rail: each run books 7 days ahead, so only Monday/Thursday runs book.
+            # Keep in sync with the schedule above.
+            - name: BOOKING_WEEKDAYS
+              value: "mon,thu"
+            # Must match spec.timeZone - the script resolves dates in this zone, not the
+            # container's UTC clock.
+            - name: BOOKING_TIMEZONE
+              value: "Europe/Amsterdam"
             - name: OP_SERVICE_ACCOUNT_TOKEN
               valueFrom:
                 secretKeyRef:

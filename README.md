@@ -27,6 +27,7 @@ Automated desk booking for Deskbird using Selenium and Kubernetes CronJob. This 
 ### Booking Logic
 
 - Calculates booking date (7 days ahead)
+- **Books Mondays and Thursdays only**: if the target date is not a configured booking weekday, the run exits early (before login) without booking
 - Navigates to your configured office and floor
 - Uses an office-hours-compatible full-day window (with fallback time ranges if needed)
 - **Preferred desk support**: Attempts to book your preferred desk first (if configured)
@@ -185,12 +186,31 @@ If the run fails:
 | `OFFICE_ID` | Yes | - | Deskbird office ID (from URL) |
 | `FLOOR_ID` | Yes | - | Deskbird floor ID (from URL) |
 | `PREFERRED_DESK` | No | - | Preferred desk (e.g., "D", "5.09 D", "5.08 B"). Letter only defaults to 5.09. Books any desk if unavailable |
+| `BOOKING_WEEKDAYS` | No | `mon,thu` | Weekdays the booking is allowed to land on. Names (`mon,thu`) or numbers (`0,3`, Monday=0). Runs targeting any other day exit without booking |
+| `BOOKING_TIMEZONE` | No | `Europe/Amsterdam` | Office timezone. All dates and booking windows resolve in this zone, not the container's UTC clock. Must match `spec.timeZone` in the CronJob |
 
 ### Schedule
 
-The default CronJob schedule is configured in `k8s/base/cronjob.yaml`. Adjust as needed:
-- Default: Every Thursday at 8 AM UTC
+The CronJob schedule is configured in `k8s/base/cronjob.yaml`. Adjust as needed:
+- Default: Every Monday and Thursday at 01:00 `Europe/Amsterdam` (`0 1 * * 1,4`)
 - Format: Standard cron syntax
+
+Because each run books 7 days ahead, a Monday run books the following Monday and a Thursday
+run books the following Thursday. The script independently enforces this via `BOOKING_WEEKDAYS`,
+so an off-schedule or manual run cannot book an unwanted day.
+
+#### Timezones must line up
+
+Three settings have to agree, or the job books the wrong weekday:
+
+1. **`spec.timeZone`** on the CronJob — keep it set. With it omitted, Kubernetes falls back to
+   the kube-controller-manager's own clock.
+2. **`BOOKING_TIMEZONE`** — the zone the script resolves "today" and the booking window in.
+3. **`BOOKING_WEEKDAYS`** — must match the days in the cron expression.
+
+This bit before: with `timeZone` unset the controller fired at 01:00 CEST, which is 23:00 UTC the
+*previous* day. The container runs UTC, so it saw Sunday/Wednesday instead of Monday/Thursday —
+booking Wednesdays and failing every Sunday. Both layers are now pinned to the office timezone.
 
 ## Troubleshooting
 

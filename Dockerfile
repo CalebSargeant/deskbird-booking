@@ -23,7 +23,8 @@ RUN curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-RUN pip install --no-cache-dir selenium
+# tzdata: fallback timezone database for zoneinfo, in case the base image ships without one
+RUN pip install --no-cache-dir selenium tzdata
 
 # Copy the script
 COPY deskbird_booking.py /usr/local/bin/deskbird_booking.py
