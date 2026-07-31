@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.10.2 (2026-07-31)
+
+### Bug Fixes
+
+- Book only Mondays and Thursdays by pinning the office timezone
+  ([`943306a`](https://github.com/CalebSargeant/deskbird-booking/commit/943306a9d8d181b00018420ae5137f394d5a7417))
+
+### Chores
+
+- Update deskbird-booking image
+  ([`9dd8844`](https://github.com/CalebSargeant/deskbird-booking/commit/9dd88441c338e8be8d11297937b839ff280a06c5))
+
+
 ## v1.10.1 (2026-07-01)
 
 ### Bug Fixes
