@@ -23,6 +23,15 @@ The script launches headless Chromium via Selenium and executes a linear flow:
 - Redirect completion checks back on Deskbird
 
 ### 3) Booking flow logic
+Before authentication, the script computes the target date (7 days ahead, resolved in
+`BOOKING_TIMEZONE` — *not* the container's UTC clock) and exits `0` without booking unless that
+date falls on a `BOOKING_WEEKDAYS` day (default `mon,thu`).
+
+Timezone handling is load-bearing: the CronJob's `spec.timeZone` and the script's
+`BOOKING_TIMEZONE` must both be the office zone. Leaving `spec.timeZone` unset makes Kubernetes
+use the controller-manager's clock, which previously fired 23:00 UTC the day *before* the intended
+one and booked the wrong weekday.
+
 After authentication, the script:
 - Computes the booking target date/time window (7 days ahead, full-day range)
 - Builds Deskbird booking URL using office/floor IDs and timestamps

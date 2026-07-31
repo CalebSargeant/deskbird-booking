@@ -1,9 +1,12 @@
 import os
+import sys
 import time
+import calendar
 import subprocess
 import logging
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -33,6 +36,46 @@ BOOKING_TIME_CANDIDATES = [
     (8, 18),   # Some offices allow bookings until 18:00
     (9, 17),   # Conservative fallback
 ]
+
+# The office timezone. Everything date-related is resolved in this zone rather than the
+# container's clock (which is UTC): the CronJob fires at 01:00 office-local, i.e. 23:00 UTC
+# the *previous* day, so a UTC-based "today" lands on the wrong weekday entirely.
+DEFAULT_BOOKING_TIMEZONE = "Europe/Amsterdam"
+
+# Only these weekdays get booked (Python weekday numbering: Monday=0 ... Sunday=6)
+DEFAULT_BOOKING_WEEKDAYS = "mon,thu"
+WEEKDAY_NUMBERS_BY_NAME = {
+    "mon": 0, "monday": 0,
+    "tue": 1, "tuesday": 1,
+    "wed": 2, "wednesday": 2,
+    "thu": 3, "thursday": 3,
+    "fri": 4, "friday": 4,
+    "sat": 5, "saturday": 5,
+    "sun": 6, "sunday": 6,
+}
+
+def parse_booking_weekdays(raw):
+    """Parse a comma-separated weekday list ('mon,thu' or '0,3') into weekday numbers"""
+    weekdays = set()
+    for token in raw.split(","):
+        token = token.strip().lower()
+        if not token:
+            continue
+        if token.isdigit():
+            day = int(token)
+            if not 0 <= day <= 6:
+                logger.error(f"Invalid weekday number '{token}' in BOOKING_WEEKDAYS (expected 0-6, Monday=0)")
+                raise ValueError(f"Invalid weekday number '{token}' in BOOKING_WEEKDAYS (expected 0-6, Monday=0)")
+            weekdays.add(day)
+        elif token in WEEKDAY_NUMBERS_BY_NAME:
+            weekdays.add(WEEKDAY_NUMBERS_BY_NAME[token])
+        else:
+            logger.error(f"Invalid weekday '{token}' in BOOKING_WEEKDAYS")
+            raise ValueError(f"Invalid weekday '{token}' in BOOKING_WEEKDAYS")
+    if not weekdays:
+        logger.error("BOOKING_WEEKDAYS must list at least one weekday")
+        raise ValueError("BOOKING_WEEKDAYS must list at least one weekday")
+    return weekdays
 
 # Get credentials from 1Password CLI
 def get_1password_field(item_name, field_name, vault="Private"):
@@ -110,6 +153,32 @@ if not OFFICE_ID or not FLOOR_ID:
 
 if PREFERRED_DESK:
     logger.info(f"Preferred desk: {PREFERRED_DESK}")
+
+# Resolve "now" in the office timezone, not the container's (see DEFAULT_BOOKING_TIMEZONE)
+BOOKING_TIMEZONE_NAME = os.environ.get("BOOKING_TIMEZONE", DEFAULT_BOOKING_TIMEZONE)
+try:
+    BOOKING_TIMEZONE = ZoneInfo(BOOKING_TIMEZONE_NAME)
+except (ZoneInfoNotFoundError, ValueError) as e:
+    logger.error(f"Invalid BOOKING_TIMEZONE '{BOOKING_TIMEZONE_NAME}': {e}")
+    raise ValueError(f"Invalid BOOKING_TIMEZONE '{BOOKING_TIMEZONE_NAME}': {e}")
+
+# Work out which day we would book (7 days ahead) and bail out early if it is not
+# one of the configured booking weekdays - no point authenticating or starting Chrome.
+BOOKING_WEEKDAYS = parse_booking_weekdays(
+    os.environ.get("BOOKING_WEEKDAYS", DEFAULT_BOOKING_WEEKDAYS)
+)
+BOOKING_WEEKDAY_NAMES = ", ".join(calendar.day_name[day] for day in sorted(BOOKING_WEEKDAYS))
+NOW = datetime.now(BOOKING_TIMEZONE)
+BOOKING_DATE = NOW + timedelta(days=7)  # Book for this day next week (7 days ahead from today)
+
+logger.info(f"Timezone: {BOOKING_TIMEZONE_NAME} (local time now: {NOW.strftime('%Y-%m-%d %H:%M %A')})")
+logger.info(f"Booking weekdays: {BOOKING_WEEKDAY_NAMES}")
+if BOOKING_DATE.weekday() not in BOOKING_WEEKDAYS:
+    logger.info(
+        f"Target date {BOOKING_DATE.strftime('%Y-%m-%d %A')} is not a booking weekday "
+        f"({BOOKING_WEEKDAY_NAMES}) - skipping run"
+    )
+    sys.exit(0)
 
 logger.info(f"Starting Deskbird booking automation")
 logger.info(f"Fetching credentials from 1Password item: {OP_ITEM_NAME} in vault: {OP_VAULT}")
@@ -442,10 +511,9 @@ try:
     )
     logger.info(f"Authentication successful! Current URL: {driver.current_url}")
     
-    # Step 6: Calculate next week's booking date
-    logger.info("Step 6: Calculating booking date")
-    today = datetime.now()
-    booking_date = today + timedelta(days=7)  # Book for this day next week (7 days ahead from today)
+    # Step 6: Next week's booking date (validated against BOOKING_WEEKDAYS at startup)
+    logger.info("Step 6: Resolving booking date")
+    booking_date = BOOKING_DATE
     logger.info(f"Booking for date: {booking_date.strftime('%Y-%m-%d %A')}")
     
     # Convert to epoch milliseconds for an office-hours-compatible full day.
