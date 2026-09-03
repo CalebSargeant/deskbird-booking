@@ -5,8 +5,8 @@
 | Component | Path | Role |
 |-----------|------|------|
 | Booking script | `deskbird_booking.py` | The entire application — a linear script (no `main()`) that runs top-to-bottom. |
-| Container | `Dockerfile` | `python:3.11-slim` + chromium + chromium-driver + 1password-cli + selenium. |
-| CronJob | `k8s/base/cronjob.yaml` | Schedule, env from the `deskbird-credentials` secret, resources, safety limits. |
+| Container | `Dockerfile` | `python:3.11-slim` + chromium + chromium-driver + 1password-cli + selenium + tzdata. |
+| CronJob | `k8s/base/cronjob.yaml` | Schedule (Monday & Thursday 01:00 Europe/Amsterdam), env, resources, safety limits. |
 | Prod overlay | `k8s/overlays/prod/` | Kustomize base + SOPS/age-encrypted secret; pins the image tag (Flux-managed). |
 | CI | `.github/workflows/` | semantic-release + multi-arch image build/push to GHCR. |
 
@@ -15,7 +15,10 @@
 The script executes as one sequence wrapped in a `try/except/finally`:
 
 1. **Config bootstrap** — read env vars; **raises immediately if `OFFICE_ID` or
-   `FLOOR_ID` is unset**. Fetch `username`/`password` from 1Password.
+   `FLOOR_ID` is unset**. Fetch `username`/`password` from 1Password. Resolve the
+   target booking date (today + 7 days) in the configured timezone. **Exit silently
+   if the target date is not a configured booking weekday** (guard rail: CronJob
+   fires on Mon/Thu 01:00 office-local, but the script verifies the day anyway).
 2. **Browser setup** — headless Chromium via Selenium (`--headless=new`,
    `--no-sandbox`, `--disable-dev-shm-usage`, in-memory `/dev/shm`).
 3. **Login + Microsoft SSO** — enter email, click through to Microsoft, enter
@@ -24,12 +27,20 @@ The script executes as one sequence wrapped in a `try/except/finally`:
 4. **Wait for real authentication** — `is_authenticated_url()` blocks until the
    browser has left `/sign-in`, `/login`, and `/authenticationHandler`, i.e. the
    OAuth callback has finished and the app has loaded (e.g. `/planning/calendar`).
-5. **Book** — compute the target day (today + 7), build the booking URL
-   (`build_booking_url`), navigate, check for an existing booking, then click
+5. **Book** — build the booking URL for the target day (`build_booking_url`),
+   navigate, check for an existing booking, then click
    `data-testid="booking-suggestions-quick-book"` — preferred desk first via
    `card_matches_preferred`, else the first (favourite-ordered) suggestion.
 
 ## Design notes & gotchas
+
+!!! warning "Timezone handling is critical"
+    Dates are resolved in `BOOKING_TIMEZONE` (default `Europe/Amsterdam`), not the
+    container's UTC clock. The CronJob fires at 01:00 office-local (e.g. 23:00 UTC
+    the *previous* day), so without this the script would book for the wrong
+    weekday. The `BOOKING_TIMEZONE` and CronJob `timeZone` fields must always be
+    in sync. The container's `/dev/shm` includes a `tzdata` fallback so timezone
+    database lookups don't fail.
 
 !!! warning "The authentication race"
     Deskbird's post-SSO landing page (`/sign-in/landing`) briefly looks like the
@@ -43,7 +54,8 @@ The script executes as one sequence wrapped in a `try/except/finally`:
     `booking-card-location` (already-booked). Re-inspect the live DOM before
     changing selectors.
 
-!!! note "Timezone"
-    Times are computed in the container's timezone (UTC), so a "full day" booking
-    surfaces as e.g. 10:00–19:00 CEST. The full-day toggle / URL params keep it a
-    whole-day reservation.
+!!! note "Booking weekday guard rail"
+    The script skips runs where the target date (today + 7 days) is not a
+    configured weekday. This provides a safety layer: even if the CronJob
+    scheduler misfires or is manually triggered on the wrong day, the booking
+    won't run on an unintended day.

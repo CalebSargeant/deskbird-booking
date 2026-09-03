@@ -10,14 +10,14 @@ CronJob**.
 ## How it works
 
 1. Read configuration from environment variables (`OFFICE_ID`, `FLOOR_ID`,
-   optional `PREFERRED_DESK`, `OP_*`).
+   optional `PREFERRED_DESK`, `OP_*`, `BOOKING_TIMEZONE`, `BOOKING_WEEKDAYS`).
 2. Fetch username, password, and TOTP from 1Password via the `op` CLI.
 3. Drive headless Chromium through the Deskbird login and Microsoft SSO flow
    (email → password → OTP), then wait until the OAuth callback completes and the
    app is truly authenticated.
 4. Navigate to the booking dashboard for the target day (7 days out) and book the
    **preferred desk** first (favourite-first "Suggestions"), falling back to any
-   available desk. Skips if a booking already exists.
+   available desk. Skips if a booking already exists. Only books on configured weekdays.
 
 ## Documentation
 
