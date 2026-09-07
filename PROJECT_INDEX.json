@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-01T09:44:04Z",
+  "generated": "2026-09-02T00:00:00Z",
   "summary": "Single-purpose automation that books a Deskbird desk 7 days in advance using headless Chromium/Selenium, Microsoft SSO, and 1Password-CLI credentials. Almost all behaviour lives in one linear script (deskbird_booking.py) that is packaged as a container and run as a Kubernetes CronJob in the 'automation' namespace of the firefly cluster, deployed via Kustomize + SOPS and reconciled by Flux.",
   "entrypoints": [
     "deskbird_booking.py:<module>  (linear script, no main(); container CMD runs it)"
@@ -9,8 +9,8 @@
       "path": "deskbird_booking.py",
       "purpose": "End-to-end booking: read env config, fetch creds + TOTP from 1Password, drive Chromium through Deskbird login + Microsoft SSO, then book a desk 7 days out (preferred desk first, else any available).",
       "exports": [
-        "get_1password_field", "get_1password_otp", "is_authenticated_url",
-        "is_microsoft_login_active", "switch_to_microsoft_window",
+        "parse_booking_weekdays", "get_1password_field", "get_1password_otp",
+        "is_authenticated_url", "is_microsoft_login_active", "switch_to_microsoft_window",
         "build_booking_url", "card_matches_preferred", "quick_book"
       ],
       "depends_on": ["selenium", "op (1Password CLI)", "chromium", "chromedriver"]
@@ -23,7 +23,7 @@
     },
     "k8s_base": {
       "path": "k8s/base/cronjob.yaml",
-      "purpose": "CronJob spec: schedule 'Mon & Thu 01:00 UTC', env from deskbird-credentials secret, resource limits, backoffLimit/activeDeadlineSeconds, in-memory /dev/shm volume.",
+      "purpose": "CronJob spec: schedule 'Mon & Thu 01:00 Europe/Amsterdam' (spec.timeZone set — required to avoid wrong-day bookings), env from deskbird-credentials secret including BOOKING_WEEKDAYS and BOOKING_TIMEZONE, resource limits, backoffLimit/activeDeadlineSeconds, in-memory /dev/shm volume.",
       "exports": ["CronJob/deskbird-booking"],
       "depends_on": ["deskbird-credentials secret", "ghcr.io/calebsargeant/deskbird-booking image"]
     },
@@ -44,7 +44,7 @@
     {
       "caller": "deskbird_booking.py module bootstrap",
       "calls": ["get_1password_field", "get_1password_otp"],
-      "note": "Runs top-to-bottom at import; RAISES immediately if OFFICE_ID or FLOOR_ID env vars are unset."
+      "note": "Runs top-to-bottom at import; exits 0 early (before Chrome/cred fetch) if target weekday not in BOOKING_WEEKDAYS. RAISES immediately if OFFICE_ID or FLOOR_ID env vars are unset, or if BOOKING_TIMEZONE is invalid."
     },
     {
       "caller": "auth flow (try block)",
