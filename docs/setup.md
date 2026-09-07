@@ -13,6 +13,9 @@ All configuration is via environment variables, sourced in production from the
 | `OFFICE_ID` | yes | — | Deskbird office ID (from the booking URL). |
 | `FLOOR_ID` | yes | — | Deskbird floor ID (from the booking URL). |
 | `PREFERRED_DESK` | no | — | e.g. `5.09 D`. Books this desk first, else any available. |
+| `BOOKING_TIMEZONE` | no | `Europe/Amsterdam` | IANA timezone for date calculations (e.g. `Europe/London`, `America/New_York`). |
+| `BOOKING_WEEKDAYS` | no | `mon,thu` | Comma-separated weekday names or numbers (e.g. `mon,thu` or `0,3`; Monday=0). |
+| `LOG_LEVEL` | no | `INFO` | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
 
 The 1Password item must expose `username`, `password`, and a configured **TOTP**.
 
