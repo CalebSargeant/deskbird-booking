@@ -27,10 +27,13 @@ The script executes as one sequence wrapped in a `try/except/finally`:
 4. **Wait for real authentication** — `is_authenticated_url()` blocks until the
    browser has left `/sign-in`, `/login`, and `/authenticationHandler`, i.e. the
    OAuth callback has finished and the app has loaded (e.g. `/planning/calendar`).
-5. **Book** — build the booking URL for the target day (`build_booking_url`),
-   navigate, check for an existing booking, then click
+5. **Book** — build the booking URL for the target day with a valid time range
+   (`build_booking_url`), navigate, check for an existing booking, then click
    `data-testid="booking-suggestions-quick-book"` — preferred desk first via
-   `card_matches_preferred`, else the first (favourite-ordered) suggestion.
+   `card_matches_preferred`, else the first (favourite-ordered) suggestion. The
+   booking uses a full-day window; if Deskbird rejects the initial time range
+   (e.g. 8-17), the script retries with fallback windows (8-18, 9-17) until one
+   succeeds.
 
 ## Design notes & gotchas
 
