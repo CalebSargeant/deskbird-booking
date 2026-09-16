@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-02T00:00:00Z",
+  "generated": "2026-09-09T00:00:00Z",
   "summary": "Single-purpose automation that books a Deskbird desk 7 days in advance using headless Chromium/Selenium, Microsoft SSO, and 1Password-CLI credentials. Almost all behaviour lives in one linear script (deskbird_booking.py) that is packaged as a container and run as a Kubernetes CronJob in the 'automation' namespace of the firefly cluster, deployed via Kustomize + SOPS and reconciled by Flux.",
   "entrypoints": [
     "deskbird_booking.py:<module>  (linear script, no main(); container CMD runs it)"
@@ -13,6 +13,7 @@
         "is_authenticated_url", "is_microsoft_login_active", "switch_to_microsoft_window",
         "build_booking_url", "card_matches_preferred", "quick_book"
       ],
+      "note": "parse_booking_weekdays / get_1password_field / get_1password_otp / is_authenticated_url are module-level. The remaining helpers are defined inside the try block.",
       "depends_on": ["selenium", "op (1Password CLI)", "chromium", "chromedriver"]
     },
     "container": {
