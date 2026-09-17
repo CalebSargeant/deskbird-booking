@@ -6,7 +6,7 @@
 |-----------|------|------|
 | Booking script | `deskbird_booking.py` | The entire application — a linear script (no `main()`) that runs top-to-bottom. |
 | Container | `Dockerfile` | `python:3.11-slim` + chromium + chromium-driver + 1password-cli + selenium + tzdata. |
-| CronJob | `k8s/base/cronjob.yaml` | Schedule (Monday & Thursday 01:00 Europe/Amsterdam), env, resources, safety limits. |
+| CronJob | `k8s/base/cronjob.yaml` | Schedule (Monday & Thursday 01:00 Europe/Amsterdam), env, resources, safety limits, in-memory `/dev/shm` volume. |
 | Prod overlay | `k8s/overlays/prod/` | Kustomize base + SOPS/age-encrypted secret; pins the image tag (Flux-managed). |
 | CI | `.github/workflows/` | semantic-release + multi-arch image build/push to GHCR. |
 
@@ -31,9 +31,8 @@ The script executes as one sequence wrapped in a `try/except/finally`:
    (`build_booking_url`), navigate, check for an existing booking, then click
    `data-testid="booking-suggestions-quick-book"` — preferred desk first via
    `card_matches_preferred`, else the first (favourite-ordered) suggestion. The
-   booking uses a full-day window; if Deskbird rejects the initial time range
-   (e.g. 8-17), the script retries with fallback windows (8-18, 9-17) until one
-   succeeds.
+   booking tries office-hours-compatible time ranges (8-17, 8-18, 9-17) in sequence;
+   if Deskbird rejects one, the script retries with the next fallback until one succeeds.
 
 ## Design notes & gotchas
 
