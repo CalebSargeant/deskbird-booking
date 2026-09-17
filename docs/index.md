@@ -7,6 +7,14 @@ script books a desk **exactly 7 days in advance** using headless Chromium
 It is packaged as a container image and runs unattended as a **Kubernetes
 CronJob**.
 
+## Features
+
+- 🔐 **Secure Authentication**: Microsoft SSO with 1Password CLI integration
+- 📅 **Automatic Scheduling**: Books desks exactly 7 days in advance
+- 🏢 **Configurable**: Supports multiple offices and floors via environment variables
+- 🐳 **Container-Ready**: Includes Dockerfile and Kubernetes manifests
+- 🔒 **SOPS Encrypted Secrets**: Production secrets encrypted with age
+
 ## How it works
 
 1. Read configuration from environment variables (`OFFICE_ID`, `FLOOR_ID`,
