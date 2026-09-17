@@ -89,7 +89,7 @@ PY
   --env-file .env \
   -e OP_SERVICE_ACCOUNT_TOKEN="$OP_SERVICE_ACCOUNT_TOKEN" \
   -e OP_ITEM_NAME="Microsoft" \
-  -e OP_VAULT="REDACTED" \
+  -e OP_VAULT="<your-vault>" \
   -e LOG_LEVEL="INFO" \
   -v "$(pwd)/e2e-artifacts:/tmp" \
   deskbird-booking:local-test
