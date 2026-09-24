@@ -75,13 +75,21 @@ Use this procedure to validate a real booking flow locally before opening a PR.
   - `FLOOR_ID`
   - optional `PREFERRED_DESK`
 
-### 1) Build the local test image
+### 1) Syntax check
+
+```bash
+python3 -m py_compile deskbird_booking.py
+```
+
+No test suite exists; syntax validation is the primary check.
+
+### 2) Build the local test image
 
 ```bash
 docker build -t deskbird-booking:local-test .
 ```
 
-### 2) Run the end-to-end booking test
+### 3) Run the end-to-end booking test
 
 This command reads the 1Password token from `secret.yaml`, passes office/floor config from `.env`, and runs the full login + booking flow:
 
@@ -97,13 +105,13 @@ PY
   --env-file .env \
   -e OP_SERVICE_ACCOUNT_TOKEN="$OP_SERVICE_ACCOUNT_TOKEN" \
   -e OP_ITEM_NAME="Microsoft" \
-  -e OP_VAULT="REDACTED" \
+  -e OP_VAULT="<your-vault>" \
   -e LOG_LEVEL="INFO" \
   -v "$(pwd)/e2e-artifacts:/tmp" \
   deskbird-booking:local-test
 ```
 
-### 3) Verify success
+### 4) Verify success
 
 Successful booking run should end with:
 
@@ -188,6 +196,7 @@ If the run fails:
 | `PREFERRED_DESK` | No | - | Preferred desk (e.g., "D", "5.09 D", "5.08 B"). Letter only defaults to 5.09. Books any desk if unavailable |
 | `BOOKING_WEEKDAYS` | No | `mon,thu` | Weekdays the booking is allowed to land on. Names (`mon,thu`) or numbers (`0,3`, Monday=0). Runs targeting any other day exit without booking |
 | `BOOKING_TIMEZONE` | No | `Europe/Amsterdam` | Office timezone. All dates and booking windows resolve in this zone, not the container's UTC clock. Must match `spec.timeZone` in the CronJob |
+| `LOG_LEVEL` | No | `INFO` | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 
 ### Schedule
 
