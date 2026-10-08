@@ -41,8 +41,7 @@ The script executes as one sequence wrapped in a `try/except/finally`:
     container's UTC clock. The CronJob fires at 01:00 office-local (e.g. 23:00 UTC
     the *previous* day), so without this the script would book for the wrong
     weekday. The `BOOKING_TIMEZONE` and CronJob `timeZone` fields must always be
-    in sync. The container's `/dev/shm` includes a `tzdata` fallback so timezone
-    database lookups don't fail.
+    in sync. The container includes `tzdata` so timezone database lookups don't fail.
 
 !!! warning "The authentication race"
     Deskbird's post-SSO landing page (`/sign-in/landing`) briefly looks like the

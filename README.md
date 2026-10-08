@@ -193,7 +193,7 @@ If the run fails:
 | `OP_VAULT` | No | `Private` | 1Password vault name |
 | `OFFICE_ID` | Yes | - | Deskbird office ID (from URL) |
 | `FLOOR_ID` | Yes | - | Deskbird floor ID (from URL) |
-| `PREFERRED_DESK` | No | - | Preferred desk (e.g., "D", "5.09 D", "5.08 B"). Letter only defaults to 5.09. Books any desk if unavailable |
+| `PREFERRED_DESK` | No | - | Preferred desk (e.g., "D", "5.09 D", "5.08 B"). Books any desk if unavailable |
 | `BOOKING_WEEKDAYS` | No | `mon,thu` | Weekdays the booking is allowed to land on. Names (`mon,thu`) or numbers (`0,3`, Monday=0). Runs targeting any other day exit without booking |
 | `BOOKING_TIMEZONE` | No | `Europe/Amsterdam` | Office timezone. All dates and booking windows resolve in this zone, not the container's UTC clock. Must match `spec.timeZone` in the CronJob |
 | `LOG_LEVEL` | No | `INFO` | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
