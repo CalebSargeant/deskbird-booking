@@ -111,24 +111,15 @@ If the run fails:
 
 ### Using Kustomize (Recommended)
 
-1. Create and encrypt your secret:
-   ```bash
-   cd k8s/overlays/prod
-   # Copy the example and edit with your values
-   cp ../../../secret.yaml.example secret.yaml
-   
-   # Edit secret.yaml with:
-   # - OP_SERVICE_ACCOUNT_TOKEN: Your 1Password service account token
-   # - OP_ITEM_NAME: Name of your 1Password item (e.g., "Microsoft")
-   # - OP_VAULT: Your 1Password vault name
-   # - OFFICE_ID: Your Deskbird office ID
-   # - FLOOR_ID: Your Deskbird floor ID
-   # - PREFERRED_DESK: (Optional) Your preferred desk name (e.g., "5.09 D")
-   
-   # Encrypt with SOPS
-   sops -e secret.yaml > secret.enc.yaml
-   rm secret.yaml  # Remove unencrypted version
-   ```
+1. Store the credentials in OCI Vault as one entry, `deskbird-credentials`, holding a JSON object with:
+   - `OP_SERVICE_ACCOUNT_TOKEN`: Your 1Password service account token
+   - `OP_ITEM_NAME`: Name of your 1Password item (e.g., "Microsoft")
+   - `OP_VAULT`: Your 1Password vault name
+   - `OFFICE_ID`: Your Deskbird office ID
+   - `FLOOR_ID`: Your Deskbird floor ID
+   - `PREFERRED_DESK`: Your preferred desk name (e.g., "5.09 D"), or empty for any desk
+
+   `k8s/overlays/prod/externalsecret.yaml` projects it into the `deskbird-credentials` Secret through the `oci-vault` ClusterSecretStore. Every property must exist, or none of the Secret is written.
 
 2. Deploy using Kustomize:
    ```bash
@@ -141,8 +132,8 @@ If the run fails:
    kubectl get pods -n automation
    ```
 
-The secret is encrypted with SOPS + age (`k8s/overlays/prod/.sops.yaml`). Edit the
-decrypted form with `sops k8s/overlays/prod/secret.enc.yaml`; **never commit a
+To change a value, write a new version of the `deskbird-credentials` vault entry;
+External Secrets picks it up within its 1h `refreshInterval`. **Never commit a
 plaintext `secret.yaml`** (it is gitignored).
 
 ### Rendering the manifests

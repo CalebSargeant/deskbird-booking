@@ -10,7 +10,7 @@ truly authenticated → book a desk **7 days ahead** (preferred desk first via t
 It ships as a container (`Dockerfile`: python:3.11-slim + chromium + chromedriver
 + 1password-cli + selenium) and runs as a **Kubernetes CronJob** in the
 `automation` namespace of the **firefly** cluster. `k8s/base/cronjob.yaml` is the
-spec; `k8s/overlays/prod` adds a SOPS/age-encrypted secret and pins the image tag.
+spec; `k8s/overlays/prod` adds an ExternalSecret (OCI Vault) and pins the image tag.
 
 CI: push to `main` → semantic-release (`.github/workflows/build-release.yaml`) →
 GitHub release → image build+push to GHCR (`container-image-release.yaml`) →

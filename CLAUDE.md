@@ -3,7 +3,7 @@
 Deskbird desk-booking automation: one headless-Chromium/Selenium Python script
 (`deskbird_booking.py`) books a desk 7 days ahead via Microsoft SSO with
 credentials from 1Password, packaged as a container and run as a Kubernetes
-CronJob (firefly cluster, `automation` ns), deployed by Kustomize + SOPS + Flux.
+CronJob (firefly cluster, `automation` ns), deployed by Kustomize + External Secrets + Flux.
 
 ## Commands
 See @.claude/QUICK_START.md for the most-run commands (syntax check, docker
