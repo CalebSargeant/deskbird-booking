@@ -3,7 +3,7 @@ kind: Kustomization
 namespace: automation
 resources:
   - ../../base
-  - secret.enc.yaml
+  - externalsecret.yaml
 images:
   - name: ghcr.io/calebsargeant/deskbird-booking
     newTag: v1.10.2 # {"$imagepolicy": "flux-system:deskbird-booking:tag"}

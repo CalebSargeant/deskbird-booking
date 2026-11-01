@@ -1,6 +1,6 @@
 {
   "generated": "2026-09-23T00:00:00Z",
-  "summary": "Single-purpose automation that books a Deskbird desk 7 days in advance using headless Chromium/Selenium, Microsoft SSO, and 1Password-CLI credentials. Almost all behaviour lives in one linear script (deskbird_booking.py) that is packaged as a container and run as a Kubernetes CronJob in the 'automation' namespace of the firefly cluster, deployed via Kustomize + SOPS and reconciled by Flux.",
+  "summary": "Single-purpose automation that books a Deskbird desk 7 days in advance using headless Chromium/Selenium, Microsoft SSO, and 1Password-CLI credentials. Almost all behaviour lives in one linear script (deskbird_booking.py) that is packaged as a container and run as a Kubernetes CronJob in the 'automation' namespace of the firefly cluster, deployed via Kustomize + External Secrets and reconciled by Flux.",
   "entrypoints": [
     "deskbird_booking.py:<module>  (linear script, no main(); container CMD runs it)"
   ],
@@ -30,9 +30,9 @@
     },
     "k8s_prod_overlay": {
       "path": "k8s/overlays/prod",
-      "purpose": "Prod Kustomize overlay: base + SOPS/age-encrypted secret (secret.enc.yaml); pins the image tag via kustomize 'images' (auto-bumped by the Flux imagepolicy annotation).",
+      "purpose": "Prod Kustomize overlay: base + ExternalSecret (externalsecret.yaml) projecting deskbird-credentials from OCI Vault; pins the image tag via kustomize 'images' (auto-bumped by the Flux imagepolicy annotation).",
       "exports": [],
-      "depends_on": ["k8s/base", "secret.enc.yaml", ".sops.yaml"]
+      "depends_on": ["k8s/base", "externalsecret.yaml"]
     },
     "ci_release": {
       "path": ".github/workflows",

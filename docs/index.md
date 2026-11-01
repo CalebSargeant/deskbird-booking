@@ -13,7 +13,7 @@ CronJob**.
 - 📅 **Automatic Scheduling**: Books desks exactly 7 days in advance
 - 🏢 **Configurable**: Supports multiple offices and floors via environment variables
 - 🐳 **Container-Ready**: Includes Dockerfile and Kubernetes manifests
-- 🔒 **SOPS Encrypted Secrets**: Production secrets encrypted with age
+- 🔒 **OCI Vault Secrets**: Production secrets projected from OCI Vault by External Secrets
 
 ## How it works
 

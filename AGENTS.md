@@ -42,7 +42,7 @@ After authentication, the script:
 ### 4) Runtime + deployment model
 - `Dockerfile` installs Chromium, ChromeDriver, 1Password CLI, and Selenium, then runs `deskbird_booking.py`
 - `k8s/base/cronjob.yaml` schedules recurring runs and injects credentials/config from `deskbird-credentials` secret
-- `k8s/overlays/prod/kustomization.yaml` composes base resources and encrypted secret for production namespace deployment
+- `k8s/overlays/prod/kustomization.yaml` composes base resources and the ExternalSecret for production namespace deployment
 
 ## Common commands
 Run all commands from repository root.

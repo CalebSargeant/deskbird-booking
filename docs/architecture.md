@@ -7,7 +7,7 @@
 | Booking script | `deskbird_booking.py` | The entire application — a linear script (no `main()`) that runs top-to-bottom. |
 | Container | `Dockerfile` | `python:3.11-slim` + chromium + chromium-driver + 1password-cli + selenium + tzdata. |
 | CronJob | `k8s/base/cronjob.yaml` | Schedule (Monday & Thursday 01:00 Europe/Amsterdam), env, resources, safety limits, in-memory `/dev/shm` volume. |
-| Prod overlay | `k8s/overlays/prod/` | Kustomize base + SOPS/age-encrypted secret; pins the image tag (Flux-managed). |
+| Prod overlay | `k8s/overlays/prod/` | Kustomize base + ExternalSecret for `deskbird-credentials` (OCI Vault); pins the image tag (Flux-managed). |
 | CI | `.github/workflows/` | semantic-release + multi-arch image build/push to GHCR. |
 
 ## Control flow

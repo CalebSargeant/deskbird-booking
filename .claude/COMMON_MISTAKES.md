@@ -16,7 +16,7 @@
   injected via the CronJob env (it lives in the secret).
 - **No tests / no linter.** Don't assume pytest/ruff. Sanity-check with
   `python3 -m py_compile deskbird_booking.py`.
-- **Secrets:** `secret.enc.yaml` is SOPS/age-encrypted; never commit a plaintext
-  `secret.yaml`. Prod deploys via Flux — avoid manual `kubectl apply` to prod.
+- **Secrets:** `deskbird-credentials` is one JSON entry in OCI Vault, projected by
+  `externalsecret.yaml`; never commit a plaintext `secret.yaml`. Prod deploys via Flux — avoid manual `kubectl apply` to prod.
 - **pre-commit** strips AI co-author trailers and pins GH Actions SHAs; expect it
   to rewrite commits.
