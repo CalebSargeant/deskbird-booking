@@ -115,7 +115,7 @@ PY
 
 Successful booking run should end with:
 
-- `✓ Clicked 'Quick book' button - booked any available desk`
+- `✓ Clicked 'Quick book' for first available desk` (or `... for preferred desk <name>` if `PREFERRED_DESK` is set and the desk is available)
 - `✓ Booking completed successfully!`
 
 If the run fails:
@@ -195,6 +195,8 @@ The CronJob schedule is configured in `k8s/base/cronjob.yaml`. Adjust as needed:
 - Default: Every Monday and Thursday at 01:00 `Europe/Amsterdam` (`0 1 * * 1,4`)
 - Format: Standard cron syntax
 
+> **Note:** `k8s/base/cronjob.yaml` sets `suspend: true`. Scheduled runs don't fire until you change that to `false` and re-apply with `kubectl apply -k k8s/overlays/prod`.
+
 Because each run books 7 days ahead, a Monday run books the following Monday and a Thursday
 run books the following Thursday. The script independently enforces this via `BOOKING_WEEKDAYS`,
 so an off-schedule or manual run cannot book an unwanted day.
@@ -208,8 +210,8 @@ Three settings have to agree, or the job books the wrong weekday:
 2. **`BOOKING_TIMEZONE`** — the zone the script resolves "today" and the booking window in.
 3. **`BOOKING_WEEKDAYS`** — must match the days in the cron expression.
 
-This bit before: with `timeZone` unset the controller fired at 01:00 CEST, which is 23:00 UTC the
-*previous* day. The container runs UTC, so it saw Sunday/Wednesday instead of Monday/Thursday —
+If `timeZone` is unset the controller fires at 01:00 CEST, which is 23:00 UTC the
+*previous* day. The container runs UTC, so it sees Sunday/Wednesday instead of Monday/Thursday,
 booking Wednesdays and failing every Sunday. Both layers are now pinned to the office timezone.
 
 ## Troubleshooting
