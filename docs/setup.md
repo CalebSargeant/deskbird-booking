@@ -99,7 +99,7 @@ PY
 
 Successful booking run should end with:
 
-- `✓ Clicked 'Quick book' button - booked any available desk`
+- `✓ Clicked 'Quick book' for first available desk` (or `... for preferred desk <name>` if `PREFERRED_DESK` is set and the desk is available)
 - `✓ Booking completed successfully!`
 
 If the run fails:
@@ -161,6 +161,12 @@ Commit types that release: `fix`/`perf` → patch, `feat` → minor (see
 The CronJob schedule is configured in `k8s/base/cronjob.yaml`. Adjust as needed:
 - Default: Every Monday and Thursday at 01:00 `Europe/Amsterdam` (`0 1 * * 1,4`)
 - Format: Standard cron syntax
+
+!!! warning "CronJob is currently suspended"
+    `k8s/base/cronjob.yaml` sets `suspend: true`. Scheduled runs don't fire until you change that to `false` and re-apply:
+    ```bash
+    kubectl apply -k k8s/overlays/prod
+    ```
 
 Because each run books 7 days ahead, a Monday run books the following Monday and a Thursday
 run books the following Thursday. The script independently enforces this via `BOOKING_WEEKDAYS`,
